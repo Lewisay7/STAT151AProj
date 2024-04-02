@@ -1,1 +1,1 @@
-# STAT151AProj
+This is the repository for STAT 151A. 
