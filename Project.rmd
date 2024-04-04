@@ -1,1 +1,3 @@
-print("hello")
+housing_data <- read.csv("input.csv")
+
+print(data)
