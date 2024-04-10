@@ -20,6 +20,8 @@ output:
 library(tidyverse)
 library(MASS)
 
+
+print("hello world")
 housing <- read.csv("Resale_Price_2017_2022.csv")
 
 id <- sample(nrow(housing),5000)
