@@ -1,6 +1,8 @@
+
+
 ```{r}
 housing <- read.csv("Resale_Price_2017_2022.csv")
-hi
+
 ```
 
 
