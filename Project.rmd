@@ -14,9 +14,9 @@ output:
 
 ## Data Collection
 
+## EDA + Data Preprocessing
 
-## EDA
--using EDA to make decisions about the data : remove outliers, taking log of resale prices , removing certain categorical columns 
+-using EDA to make decisions about the data : remove outliers, taking log of resale prices , removing certain categorical columns
 
 ```{r libraries, include=FALSE}
 library(tidyverse)
@@ -30,8 +30,8 @@ library(caret)
 
 ```
 
+### 1. Log transfrom
 
-### 1. Log transfrom 
 ```{r}
 
 housing <- read.csv("Resale_Price_2017_2022.csv")
@@ -48,16 +48,14 @@ ggplot(sample_housing) +
   theme_minimal()
 
 
-##Things to do 
-#drop some columns 
-#one hot encoding for flat type and flat model
-# convert the leasing to months only 
-
 ```
+
 We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
 
-### 2. One hot encoding for Flat Type 
-We will be apply one hot encoding for the `flat_type` column to regress on the categorical values 
+### 2. One hot encoding for Flat Type
+
+We will be apply one hot encoding for the `flat_type` column to regress on the categorical values
+
 ```{r}
 housing <- housing %>%
   mutate(
@@ -73,8 +71,8 @@ housing <- housing %>%
 
 ```
 
-###3. Data Manipulation
-We will be converting the `remaining_lease` column that contains how long the lease is to be of unit month instead of the current year+month. 
+###3. Data Manipulation We will be converting the `remaining_lease` column that contains how long the lease is to be of unit month instead of the current year+month.
+
 ```{r}
 
 ##Function to convert from years+ months to months
@@ -94,7 +92,9 @@ housing <- housing %>%
             rowwise() %>%
             mutate(remaining_lease_mth = extract_months(remaining_lease))
 ```
-Then, we will categorize the different towns of Singapore into NSEW regions: 
+
+Then, we will categorize the different towns of Singapore into NSEW regions:
+
 ```{r}
 
 # Function to categorize towns into NSEW regions
@@ -123,7 +123,9 @@ housing <- housing %>%
   mutate(region = categorize_town(toupper(town)))
 
 ```
-Then, we apply one-hot encoding on the regions as well: 
+
+Then, we apply one-hot encoding on the regions as well:
+
 ```{r}
 housing <- housing %>%
   mutate(
@@ -134,14 +136,6 @@ housing <- housing %>%
   )
 ```
 
-
-
-## Data Preprocessing
-
 ## Model Training and Evaluation
 
 ## Limitation and Future Work
-
-
-
-
