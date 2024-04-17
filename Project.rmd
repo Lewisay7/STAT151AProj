@@ -13,22 +13,26 @@ output:
 
 ## Research Objectives
 
+Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the  data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
+
 ## Data Collection
+
+Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
 
 ## EDA + Data Preprocessing
 
--using EDA to make decisions about the data : remove outliers, taking log of resale prices , removing certain categorical columns
+We will begin with Exploratory Data Analysis to understand the data that we are working with. We will remove outliers as necessary, transform categorical columns numeric, and take the log of resale prices to capture its full effects.
 
 ```{r libraries, include=FALSE}
 library(tidyverse)
 library(MASS)
+library(glmnet)
 if (!requireNamespace("caret", quietly = TRUE)) {
   # If not installed, install the package
   install.packages("caret")
 }
 
 library(caret)
-
 ```
 
 ### 1. Log transfrom
@@ -139,4 +143,30 @@ housing <- housing %>%
 
 ## Model Training and Evaluation
 
-## Limitation and Future Work
+In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
+
+```{r}
+#### THIS IS GENERAL, NEED TO ADJUST
+
+# Create an X matrix that represents the data frame above, but in linear perspective.  
+X <- matrix(rnorm(100*20), 100, 20)
+
+# This is our y values column.
+y <- rnorm(100)
+
+# Perform Ridge regression
+ridge_model <- glmnet(X, y, alpha = 0)
+predictions <- predict(ridge_model, newx = X, s = 0.01)  # Adjust s (lambda) as needed
+
+# Visualize the lambda's and select the best one.
+plot(ridge_model, xvar = "lambda", label = TRUE)
+cv_ridge <- cv.glmnet(X, y, alpha = 0)
+plot(cv_ridge)
+
+# Select the best lambda value.
+best_lambda <- cv_ridge$lambda.min
+```
+
+
+
+## Limitations and Future Work
