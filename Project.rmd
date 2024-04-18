@@ -10,10 +10,9 @@ output:
 
 ## Introduction
 
-
 ## Research Objectives
 
-Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the  data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
+Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
 
 ## Data Collection
 
@@ -146,26 +145,41 @@ housing <- housing %>%
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
 ```{r}
-X <- housing %>% dplyr::select(block,floor_area_sqm,remaining_lease_mth,
-                          is_2_room,is_3_room,is_4_room,is_5_room,is_executive,is_1_room,
-                          is_multi_generation,is_north,is_south,is_west,is_east) %>% 
-              as.data.frame
-X
+X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth,
+                          is_2_room,is_3_room,is_4_room,is_5_room,is_executive
+                          ,is_1_room
+                          #,is_multi_generation 
+                          ,is_north,is_south,is_west
+                          # ,is_east
+                          ,resale_price) %>% 
+                as.data.frame %>%  
+                slice_sample(n=10000)
 
-y <- housing$resale_price
+# scale_cols <- c("floor_area_sqm","remaining_lease_mth")
+# 
+# X[,scale_cols] <- scale(X[, scale_cols])
 
-lm(y ~ . , data=X)
+
+ans <- lm( resale_price ~ ., data=X)
 
   
-# Create an X matrix that represents the data frame above, but in linear perspective.  
-X <- matrix(rnorm(134168 * 24), 134168, 24)
 
-# This is our y values column.
-y <- rnorm(134168)
+ggplot(X) + 
+  geom_point()
+```
+
+Beta values very big, so we do regularization
+
+```{r}
+# # Create an X matrix that represents the data frame above, but in linear perspective. 
+# X <- matrix(rnorm(134168 * 24), 134168, 24)
+# 
+# # This is our y values column.
+# y <- rnorm(134168)
 
 # Perform Ridge regression
-ridge_model <- glmnet(X, y, alpha = 0)
-predictions <- predict(ridge_model, newx = X)  # Adjust s (lambda) as needed
+ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0)
+predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
 
 # Select the index with best lambda value.
 min_lambda <- ridge_model$lambda %>% 
@@ -175,9 +189,6 @@ best_lambda <- ridge_model$lambda[min_lambda]
 best_lambda
 
 ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
-
 ```
-
-
 
 ## Limitations and Future Work
