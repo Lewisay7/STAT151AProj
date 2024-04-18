@@ -146,25 +146,36 @@ housing <- housing %>%
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
 ```{r}
-#### THIS IS GENERAL, NEED TO ADJUST
+X <- housing %>% dplyr::select(block,floor_area_sqm,remaining_lease_mth,
+                          is_2_room,is_3_room,is_4_room,is_5_room,is_executive,is_1_room,
+                          is_multi_generation,is_north,is_south,is_west,is_east) %>% 
+              as.data.frame
+X
 
+y <- housing$resale_price
+
+lm(y ~ . , data=X)
+
+  
 # Create an X matrix that represents the data frame above, but in linear perspective.  
-X <- matrix(rnorm(100*20), 100, 20)
+X <- matrix(rnorm(134168 * 24), 134168, 24)
 
 # This is our y values column.
-y <- rnorm(100)
+y <- rnorm(134168)
 
 # Perform Ridge regression
 ridge_model <- glmnet(X, y, alpha = 0)
-predictions <- predict(ridge_model, newx = X, s = 0.01)  # Adjust s (lambda) as needed
+predictions <- predict(ridge_model, newx = X)  # Adjust s (lambda) as needed
 
-# Visualize the lambda's and select the best one.
-plot(ridge_model, xvar = "lambda", label = TRUE)
-cv_ridge <- cv.glmnet(X, y, alpha = 0)
-plot(cv_ridge)
+# Select the index with best lambda value.
+min_lambda <- ridge_model$lambda %>% 
+                as.vector %>% 
+                    which.min
+best_lambda <- ridge_model$lambda[min_lambda]
+best_lambda
 
-# Select the best lambda value.
-best_lambda <- cv_ridge$lambda.min
+ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
+
 ```
 
 
