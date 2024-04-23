@@ -155,17 +155,17 @@ X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth,
                 as.data.frame %>%  
                 slice_sample(n=10000)
 
-# scale_cols <- c("floor_area_sqm","remaining_lease_mth")
-# 
-# X[,scale_cols] <- scale(X[, scale_cols])
+scale_cols <- c("floor_area_sqm","remaining_lease_mth")
+
+X[,scale_cols] <- scale(X[, scale_cols])
 
 
-ans <- lm( resale_price ~ ., data=X)
+ans <- lm(log(resale_price) ~ ., data=X)
 
-  
 
-ggplot(X) + 
-  geom_point()
+
+
+
 ```
 
 Beta values very big, so we do regularization
@@ -179,7 +179,7 @@ Beta values very big, so we do regularization
 
 # Perform Ridge regression
 ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0)
-predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
+#predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
 
 # Select the index with best lambda value.
 min_lambda <- ridge_model$lambda %>% 
