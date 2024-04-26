@@ -10,6 +10,10 @@ output:
 
 ## Introduction
 
+According to the Federal Reserve Board of the United States, the effects of the COVID-19 pandemic on the U.S. housing market have led to a rapid increase in housing prices with almost $9 trillion in the wealth of owner occupied housing between the years 2020-2022. From the perspective of a prospective homeowner, the median housing price in the United States has nearly tripled between 1992 to 2021 with the largest spike in housing prices occurring during after the pandemic.
+
+This consequence of the pandemic is not unique to the United States economy and instead, is omnipresent all throughout the world. 
+
 ## Research Objectives
 
 Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
