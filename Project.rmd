@@ -191,4 +191,14 @@ best_lambda
 ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
 ```
 
+## Subsetting our dataset
+We will filter all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic.
+```{r}
+pre_covid <- housing %>% 
+  filter(month < "2020-04")
+
+covid <- housing %>% 
+  filter(month >= "2020-04")
+```
+
 ## Limitations and Future Work
