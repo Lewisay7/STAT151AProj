@@ -20,10 +20,10 @@ Our data collection process began with an open web research on the housing marke
 
 ## EDA + Data Preprocessing
 
-We will begin with Exploratory Data Analysis to understand the data that we are working with. We will remove outliers as necessary, transform categorical columns numeric, and take the log of resale prices to capture its full effects.
+We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
 ```{r libraries, include=FALSE}
-library(tidyverse)
+
 library(MASS)
 library(glmnet)
 if (!requireNamespace("caret", quietly = TRUE)) {
@@ -32,33 +32,43 @@ if (!requireNamespace("caret", quietly = TRUE)) {
 }
 
 library(caret)
+library(tidyverse)
+
+housing <- read.csv("Resale_Price_2017_2022.csv")
 ```
 
-### 1. Log transfrom
+### Data Inspection
 
 ```{r}
 
-housing <- read.csv("Resale_Price_2017_2022.csv")
+cat("Dimension of data: ", dim(housing), "\n")
 
-id <- sample(nrow(housing),7000)
-sample_housing <- housing[id,]
+#NA values in cols
+na_counts <- colSums(is.na(housing))
 
-## histogram
-ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm,y=resale_price),size=0.5,position="identity") + 
-  theme_minimal()
-ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm,y=log(resale_price)),size=0.5,position="identity") + 
-  theme_minimal()
+# 
+any_na <- any(na_counts > 0)
 
-
+cat("Datasets contains NA values : ",any_na)
 ```
 
-We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
+There are no null values in the dataset, so it is clean.
 
-### 2. One hot encoding for Flat Type
+```{r}
+head(housing)
+summary(housing)
+```
 
-We will be apply one hot encoding for the `flat_type` column to regress on the categorical values
+Upon our first inspection of the data, we will be using the `resale_price` as the response variable, and the columns `flat_type,floor_area_sqm,remaining_lease,town` to serve as the predictors.
+```{r}
+housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
+                              remaining_lease,resale_price)
+```
+
+
+### 1. One hot encoding for Flat Type
+
+From the above summary, we see that the `flat_type` is categorical variable. Thus,we will be apply one hot encoding on it for the model to regress. 
 
 ```{r}
 housing <- housing %>%
@@ -70,34 +80,19 @@ housing <- housing %>%
     is_executive = ifelse(flat_type == "EXECUTIVE", 1, 0),
     is_1_room = ifelse(flat_type == "1 ROOM", 1, 0),
     is_multi_generation = ifelse(flat_type == "MULTI-GENERATION", 1, 0)
-  )
+  ) %>% 
+  dplyr::select(!flat_type)
 
 
 ```
 
-###3. Data Manipulation We will be converting the `remaining_lease` column that contains how long the lease is to be of unit month instead of the current year+month.
 
+Also, we noted that for `town`, there is too many distinct values: 
 ```{r}
-
-##Function to convert from years+ months to months
-extract_months <- function(duration_str) {
-    # Split into components
-    components <- strsplit(duration_str, " ", perl = TRUE)[[1]]
-    
-    # Extract years and months (if available)
-    years <- as.numeric(components[1])
-    months <- ifelse(length(components) >= 3, as.numeric(components[length(components)-1]), 0)
-    
-    # Return total months
-    return(years * 12 + months)
-}
-
-housing <- housing %>% 
-            rowwise() %>%
-            mutate(remaining_lease_mth = extract_months(remaining_lease))
+cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
 
-Then, we will categorize the different towns of Singapore into NSEW regions:
+Thus, we will categorize the different towns of Singapore into NSEW regions, and further apply one-hot encoding as done above. 
 
 ```{r}
 
@@ -124,21 +119,93 @@ categorize_town <- function(town) {
 # Add a new column for NSEW region
 housing <- housing %>%
   rowwise() %>%
-  mutate(region = categorize_town(toupper(town)))
-
-```
-
-Then, we apply one-hot encoding on the regions as well:
-
-```{r}
-housing <- housing %>%
+  mutate(region = categorize_town(toupper(town))) %>% 
   mutate(
     is_north = ifelse(region == "North", 1, 0),
     is_south = ifelse(region == "South", 1, 0),
     is_west = ifelse(region == "West", 1, 0),
     is_east = ifelse(region == "East", 1, 0)
-  )
+  ) %>% 
+  dplyr::select(!region)
+
 ```
+
+
+Note that for one-hot encoding on the columns `region` and `flat_type` , we can just drop one of the columns as it can be identified by the rest of the columns, i.e `(is_north,is_south,is_west) = (0,0,0)`corresponds to the house being in the East Region.
+
+```{r}
+housing <- housing %>% 
+        dplyr::select(!c(is_east,is_multi_generation,town))
+
+##
+```
+
+###3. Data Manipulation 
+We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
+
+```{r}
+
+##Function to convert from years+ months to months
+extract_months <- function(duration_str) {
+    # Split into components
+    components <- strsplit(duration_str, " ", perl = TRUE)[[1]]
+    
+    # Extract years and months (if available)
+    years <- as.numeric(components[1])
+    months <- ifelse(length(components) >= 3, as.numeric(components[length(components)-1]), 0)
+    
+    # Return total months
+    return(years * 12 + months)
+}
+
+housing <- housing %>% 
+            rowwise() %>%
+            mutate(remaining_lease_mth = extract_months(remaining_lease)) %>% 
+            dplyr::select(!remaining_lease)
+
+
+
+
+```
+###4. Standardizing Predictor Columns
+```{r}
+#Standardizing predictor columns
+X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
+      scale() %>% as.data.frame()
+colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
+
+housing <- cbind(housing,X) %>% 
+  dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
+```
+
+
+```{r}
+corr_mat<- cor(housing[sapply(housing, is.numeric)])
+corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+### 1. Log transform
+
+```{r}
+
+
+id <- sample(nrow(housing),7000)
+sample_housing <- housing[id,]
+
+## histogram
+ggplot(sample_housing) + 
+  geom_point(aes(x=floor_area_sqm,y=resale_price),size=0.5,position="identity") + 
+  theme_minimal()
+ggplot(sample_housing) + 
+  geom_point(aes(x=floor_area_sqm,y=log(resale_price)),size=0.5,position="identity") + 
+  theme_minimal()
+
+
+```
+
+We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
+
 
 ## Model Training and Evaluation
 
@@ -155,12 +222,14 @@ X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth,
                 as.data.frame %>%  
                 slice_sample(n=10000)
 
-scale_cols <- c("floor_area_sqm","remaining_lease_mth")
-
-X[,scale_cols] <- scale(X[, scale_cols])
-
-
-ans <- lm(log(resale_price) ~ ., data=X)
+# ggplot(housing) + 
+#   geom_boxplot(aes(x=resale_price))
+# scale_cols <- c("floor_area_sqm","remaining_lease_mth")
+# 
+# X[,scale_cols] <- scale(X[, scale_cols])
+# 
+# 
+# ans <- lm(log(resale_price) ~ ., data=X)
 
 
 
@@ -171,28 +240,26 @@ ans <- lm(log(resale_price) ~ ., data=X)
 Beta values very big, so we do regularization
 
 ```{r}
-# # Create an X matrix that represents the data frame above, but in linear perspective. 
-# X <- matrix(rnorm(134168 * 24), 134168, 24)
-# 
-# # This is our y values column.
-# y <- rnorm(134168)
+# # Create an X matrix that represents the data frame above, but in linear perspective
 
 # Perform Ridge regression
-ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0)
-#predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
-
-# Select the index with best lambda value.
-min_lambda <- ridge_model$lambda %>% 
-                as.vector %>% 
-                    which.min
-best_lambda <- ridge_model$lambda[min_lambda]
-best_lambda
-
-ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
+# ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0)
+# #predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
+# 
+# # Select the index with best lambda value.
+# min_lambda <- ridge_model$lambda %>% 
+#                 as.vector %>% 
+#                     which.min
+# best_lambda <- ridge_model$lambda[min_lambda]
+# best_lambda
+# 
+# ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
 ```
 
 ## Subsetting our dataset
+
 We will filter all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic.
+
 ```{r}
 pre_covid <- housing %>% 
   filter(month < "2020-04")
