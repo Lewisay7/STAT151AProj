@@ -34,7 +34,11 @@ if (!requireNamespace("caret", quietly = TRUE)) {
   # If not installed, install the package
   install.packages("caret")
 }
-
+if (!requireNamespace("corrplot", quietly = TRUE)) {
+  # If not installed, install the package
+  install.packages("corrplot")
+}
+library(corrplot)
 library(caret)
 library(tidyverse)
 
