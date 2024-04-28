@@ -252,6 +252,27 @@ Beta values very big, so we do regularization
 
 ```{r}
 
+# Set seed for reproducibility
+set.seed(123)
+
+# Create an index for splitting the data
+split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)
+
+# Split the data into training and test sets
+train<- df[split, ]
+test <- df[-split, ]
+
+X_train <- train %>% dplyr::select(!resale_price)
+y_train <- train$resale_price
+
+# Fit Ridge model
+ridge_model <- glmnet(x = X_train, y = y_train, alpha = 0)
+
+
+# Extract coefficients from the ridge regression model
+coefficients <- coef(ridge_model)
+
+
 ```
 
 ```{r}
