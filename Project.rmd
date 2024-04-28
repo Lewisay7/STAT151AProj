@@ -10,7 +10,7 @@ output:
 
 ## Introduction
 
-According to the Federal Reserve Board of the United States, the effects of the COVID-19 pandemic on the U.S. housing market have led to a rapid increase in housing prices with almost $9 trillion in the wealth of owner occupied housing between the years 2020-2022. From the perspective of a prospective homeowner, the median housing price in the United States has nearly tripled between 1992 to 2021 with the largest spike in housing prices occurring during after the pandemic.
+According to the Federal Reserve Board of the United States, the effects of the COVID-19 pandemic on the U.S. housing market have led to a rapid increase in housing prices with almost \$9 trillion in the wealth of owner occupied housing between the years 2020-2022. From the perspective of a prospective homeowner, the median housing price in the United States has nearly tripled between 1992 to 2021 with the largest spike in housing prices occurring during after the pandemic.
 
 This consequence of the pandemic is not unique to the United States economy and instead, is omnipresent all throughout the world. With the effects of the pandemic taken into consideration, we are motivated by this recent event to see how the theory of linear modelling could be applied in order to better understand how it affects the price of housing across a large population. In particular, we aim to do this with a country that is smaller relative to the United States on the country of Singapore. Throughout this report, we will attempt to understand the effects of COVID-19 and housing prices utilizing techniques such as linear regression, ridge and lasso models, and the model's effectiveness using cross-validation.
 
@@ -49,9 +49,6 @@ housing <- read.csv("Resale_Price_2017_2022.csv")
 ### Data Inspection
 
 ```{r}
-
-cat("Dimension of data: ", dim(housing), "\n")
-
 #NA values in cols
 na_counts <- colSums(is.na(housing))
 
@@ -64,20 +61,19 @@ cat("Datasets contains NA values : ",any_na)
 There are no null values in the dataset, so it is clean.
 
 ```{r}
-head(housing)
-summary(housing)
+glimpse(housing)
 ```
 
 Upon our first inspection of the data, we will be using the `resale_price` as the response variable, and the columns `flat_type,floor_area_sqm,remaining_lease,town` to serve as the predictors.
+
 ```{r}
 housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
                               remaining_lease,resale_price)
 ```
 
-
 #### 1. One-hot-encoding
 
-From the above summary, we see that the `flat_type` is categorical variable. Thus,we will be apply one hot encoding on it for the model to regress. 
+From the above summary, we see that the `flat_type` is categorical variable. Thus,we will be apply one hot encoding on it for the model to regress.
 
 ```{r}
 housing <- housing %>%
@@ -95,13 +91,13 @@ housing <- housing %>%
 
 ```
 
+Also, we noted that for `town`, there is too many distinct values:
 
-Also, we noted that for `town`, there is too many distinct values: 
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
 
-Thus, we will categorize the different towns of Singapore into NSEW regions, and further apply one-hot encoding as done above. 
+Thus, we will categorize the different towns of Singapore into NSEW regions, and further apply one-hot encoding as done above.
 
 ```{r}
 
@@ -139,7 +135,6 @@ housing <- housing %>%
 
 ```
 
-
 Note that for one-hot encoding on the columns `region` and `flat_type` , we can just drop one of the columns as it can be identified by the rest of the columns, i.e `(is_north,is_south,is_west) = (0,0,0)`corresponds to the house being in the East Region.
 
 ```{r}
@@ -149,7 +144,8 @@ housing <- housing %>%
 ##
 ```
 
-#### 2. Data Manipulation 
+#### 2. Data Manipulation
+
 We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
 
 ```{r}
@@ -176,7 +172,9 @@ housing <- housing %>%
 
 
 ```
+
 #### 3. Standardizing Predictor Columns
+
 ```{r}
 #Standardizing predictor columns
 X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
@@ -187,7 +185,6 @@ housing <- cbind(housing,X) %>%
   dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
 ```
 
-
 ```{r}
 corr_mat<- cor(housing[sapply(housing, is.numeric)])
 corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
@@ -197,18 +194,18 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
 #### 4. Log transform
 
 ```{r}
-
-
 id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
-## histogram
 p1 <- ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm_std,y=resale_price),size=0.5,position="identity") + 
-  theme_minimal()
+        geom_point(aes(x=floor_area_sqm_std,y=resale_price),
+                   size=0.5,position="identity") + 
+        theme_minimal()
 p2 <- ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),size=0.5,position="identity") + 
-  theme_minimal()
+        geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),
+                   size=0.5,position="identity") + 
+        theme_minimal()
+
 grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
 
 
@@ -217,23 +214,18 @@ grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price"
 
 We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
 
-
-##Methods
+## Methods
 
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
 ```{r}
 
-# ggplot(housing) + 
-#   geom_boxplot(aes(x=resale_price))
-# scale_cols <- c("floor_area_sqm","remaining_lease_mth")
-# 
-# X[,scale_cols] <- scale(X[, scale_cols])
-# 
-# 
-# ans <- lm(log(resale_price) ~ ., data=X)
+df <- housing %>% dplyr::select(!month)
 
 
+ori <- lm(log(resale_price) ~ . + 0, data = df)
+
+ori
 
 
 
@@ -270,8 +262,10 @@ covid <- housing %>%
   filter(month >= "2020-04")
 ```
 
-##Results
-##Discussion
-###Limitations and Future Work
+## Results 
 
-#####Reference
+## Discussion 
+
+### Limitations and Future Work
+
+##### Reference
