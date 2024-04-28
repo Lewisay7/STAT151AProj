@@ -14,15 +14,15 @@ According to the Federal Reserve Board of the United States, the effects of the 
 
 This consequence of the pandemic is not unique to the United States economy and instead, is omnipresent all throughout the world. With the effects of the pandemic taken into consideration, we are motivated by this recent event to see how the theory of linear modelling could be applied in order to better understand how it affects the price of housing across a large population. In particular, we aim to do this with a country that is smaller relative to the United States on the country of Singapore. Throughout this report, we will attempt to understand the effects of COVID-19 and housing prices utilizing techniques such as linear regression, ridge and lasso models, and the model's effectiveness using cross-validation.
 
-## Research Objectives
+## Problem Description
 
 Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
 
-## Data Collection
+## Data
 
 Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
 
-## EDA + Data Preprocessing
+### EDA + Data Preprocessing
 
 We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
@@ -41,6 +41,7 @@ if (!requireNamespace("corrplot", quietly = TRUE)) {
 library(corrplot)
 library(caret)
 library(tidyverse)
+library(gridExtra)
 
 housing <- read.csv("Resale_Price_2017_2022.csv")
 ```
@@ -74,7 +75,7 @@ housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
 ```
 
 
-### 1. One hot encoding for Flat Type
+#### 1. One-hot-encoding
 
 From the above summary, we see that the `flat_type` is categorical variable. Thus,we will be apply one hot encoding on it for the model to regress. 
 
@@ -148,7 +149,7 @@ housing <- housing %>%
 ##
 ```
 
-###3. Data Manipulation 
+#### 2. Data Manipulation 
 We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
 
 ```{r}
@@ -175,7 +176,7 @@ housing <- housing %>%
 
 
 ```
-###4. Standardizing Predictor Columns
+#### 3. Standardizing Predictor Columns
 ```{r}
 #Standardizing predictor columns
 X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
@@ -193,7 +194,7 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
          tl.col = "black", tl.srt = 45)
 ```
 
-### 1. Log transform
+#### 4. Log transform
 
 ```{r}
 
@@ -202,12 +203,14 @@ id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
 ## histogram
-ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm,y=resale_price),size=0.5,position="identity") + 
+p1 <- ggplot(sample_housing) + 
+  geom_point(aes(x=floor_area_sqm_std,y=resale_price),size=0.5,position="identity") + 
   theme_minimal()
-ggplot(sample_housing) + 
-  geom_point(aes(x=floor_area_sqm,y=log(resale_price)),size=0.5,position="identity") + 
+p2 <- ggplot(sample_housing) + 
+  geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),size=0.5,position="identity") + 
   theme_minimal()
+grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+
 
 
 ```
@@ -215,20 +218,11 @@ ggplot(sample_housing) +
 We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
 
 
-## Model Training and Evaluation
+##Methods
 
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
 ```{r}
-X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth,
-                          is_2_room,is_3_room,is_4_room,is_5_room,is_executive
-                          ,is_1_room
-                          #,is_multi_generation 
-                          ,is_north,is_south,is_west
-                          # ,is_east
-                          ,resale_price) %>% 
-                as.data.frame %>%  
-                slice_sample(n=10000)
 
 # ggplot(housing) + 
 #   geom_boxplot(aes(x=resale_price))
@@ -264,7 +258,7 @@ Beta values very big, so we do regularization
 # ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
 ```
 
-## Subsetting our dataset
+### Subsetting our dataset
 
 We will filter all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic.
 
@@ -276,4 +270,8 @@ covid <- housing %>%
   filter(month >= "2020-04")
 ```
 
-## Limitations and Future Work
+##Results
+##Discussion
+###Limitations and Future Work
+
+#####Reference
