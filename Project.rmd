@@ -43,7 +43,7 @@ library(caret)
 library(tidyverse)
 library(gridExtra)
 
-housing <- read.csv("Resale_Price_2017_2022.csv")
+housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
 ### Data Inspection
@@ -68,12 +68,14 @@ Upon our first inspection of the data, we will be using the `resale_price` as th
 
 ```{r}
 housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
-                              remaining_lease,resale_price)
+                              remaining_lease,resale_price) %>% 
+            mutate(month = parse_date(month,format="%Y-%m"))
+
 ```
 
 #### 1. One-hot-encoding
 
-From the above summary, we see that the `flat_type` is categorical variable. Thus,we will be apply one hot encoding on it for the model to regress.
+From the above summary, we see that the `flat_type` is a categorical variable. Thus,we will be apply one hot encoding on it for the model to regress.
 
 ```{r}
 housing <- housing %>%
@@ -225,8 +227,23 @@ df <- housing %>% dplyr::select(!month)
 
 ori <- lm(log(resale_price) ~ . + 0, data = df)
 
-ori
+yhat <- predict(ori)
 
+y <- log(df$resale_price)
+
+MSE_ori <- mean((y-yhat)^2)
+cat("MSE from the linear model: ", MSE_ori)
+
+epsilon <- data.frame(resid=resid(ori),month=housing$month)
+
+residuals_means <- epsilon %>%
+  group_by(month) %>%
+  summarise(mean_residual = mean(resid))
+
+# Now you can plot the mean residuals against the months
+ggplot(residuals_means, aes(x = month, y = mean_residual)) +
+  geom_line() +
+  labs(x = "Month", y = "Mean Residuals", title = "Mean Residuals Over Time")
 
 
 ```
@@ -234,6 +251,11 @@ ori
 Beta values very big, so we do regularization
 
 ```{r}
+
+```
+
+```{r}
+
 # # Create an X matrix that represents the data frame above, but in linear perspective
 
 # Perform Ridge regression
