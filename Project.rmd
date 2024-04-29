@@ -321,28 +321,52 @@ anova_test <- aov(resale_price ~ is_1_room +
                     is_south +
                     is_west +
                     floor_area_sqm_std +
-                    remaining_lease_std, housing)
+                    remaining_lease_std, df)
 anova_test
 
 # F-test on each features with 2 levels
-is_2_room <- var.test(resale_price ~ is_1_room, housing, 
+is_1_room <- var.test(resale_price ~ is_1_room, df, 
          alternative = "two.sided")
-is_2_room <- var.test(resale_price ~ is_2_room, housing, 
+is_2_room <- var.test(resale_price ~ is_2_room, df, 
          alternative = "two.sided")
-is_3_room <- var.test(resale_price ~ is_3_room, housing, 
+is_3_room <- var.test(resale_price ~ is_3_room, df, 
          alternative = "two.sided")
-is_4_room <- var.test(resale_price ~ is_4_room, housing, 
+is_4_room <- var.test(resale_price ~ is_4_room, df, 
          alternative = "two.sided")
-is_5_room <- var.test(resale_price ~ is_5_room, housing, 
+is_5_room <- var.test(resale_price ~ is_5_room, df, 
          alternative = "two.sided")
-is_executive <- var.test(resale_price ~ is_executive, housing, 
+is_executive <- var.test(resale_price ~ is_executive, df, 
          alternative = "two.sided")
-is_north <- var.test(resale_price ~ is_north, housing, 
+is_north <- var.test(resale_price ~ is_north, df, 
          alternative = "two.sided")
-is_south <- var.test(resale_price ~ is_south, housing, 
+is_south <- var.test(resale_price ~ is_south, df, 
          alternative = "two.sided")
-is_west <- var.test(resale_price ~ is_west, housing, 
+is_west <- var.test(resale_price ~ is_west, df, 
          alternative = "two.sided")
+
+F_test_vals <- list(
+  is_1_room = is_1_room,
+  is_2_room = is_2_room,
+  is_3_room = is_3_room,
+  is_4_room = is_4_room,
+  is_5_room = is_5_room,
+  is_executive = is_executive,
+  is_north = is_north,
+  is_south = is_south,
+  is_west = is_west
+)
+
+# Extract p-values
+p_vals <- sapply(F_test_vals, function(result) {
+  result$p.value
+})
+
+# Check if any p-value is less than a significance level (e.g., 0.05)
+any(p_vals > 0.05)
+big_p <- which(p_vals>0.05)
+
+cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
+cat("Corresponding p-value: ",p_vals[big_p])
 
 # More than two levels, won't run with F-test.
 #floor_area_sqm_std <- var.test(resale_price ~ floor_area_sqm_std, housing, 
@@ -352,20 +376,13 @@ is_west <- var.test(resale_price ~ is_west, housing,
 
 ```
 
+```{}
+```
 
+## Results
 
-
-## Results 
-
-## Discussion 
+## Discussion
 
 ### Limitations and Future Work
 
-
-
 ##### Reference
-
-
-
-
-
