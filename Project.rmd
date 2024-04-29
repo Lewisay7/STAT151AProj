@@ -225,7 +225,6 @@ In order to evaluate the most statistically significant housing metrics and redu
 
 df <- housing %>% dplyr::select(!month)
 
-
 ori <- lm(log(resale_price) ~ . + 0, data = df)
 
 yhat <- predict(ori)
@@ -249,10 +248,8 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 
 ```
 
-Beta values very big, so we do regularization
 
 ```{r}
-
 # Set seed for reproducibility
 set.seed(123)
 
@@ -322,27 +319,27 @@ anova_test <- aov(resale_price ~ is_1_room +
                     is_west +
                     floor_area_sqm_std +
                     remaining_lease_std, df)
-anova_test
+
 
 # F-test on each features with 2 levels
-is_1_room <- var.test(resale_price ~ is_1_room, df, 
-         alternative = "two.sided")
-is_2_room <- var.test(resale_price ~ is_2_room, df, 
-         alternative = "two.sided")
-is_3_room <- var.test(resale_price ~ is_3_room, df, 
-         alternative = "two.sided")
-is_4_room <- var.test(resale_price ~ is_4_room, df, 
-         alternative = "two.sided")
-is_5_room <- var.test(resale_price ~ is_5_room, df, 
-         alternative = "two.sided")
-is_executive <- var.test(resale_price ~ is_executive, df, 
-         alternative = "two.sided")
-is_north <- var.test(resale_price ~ is_north, df, 
-         alternative = "two.sided")
-is_south <- var.test(resale_price ~ is_south, df, 
-         alternative = "two.sided")
-is_west <- var.test(resale_price ~ is_west, df, 
-         alternative = "two.sided")
+#is_1_room <- var.test(resale_price ~ is_1_room, df, 
+#         alternative = "two.sided")
+#is_2_room <- var.test(resale_price ~ is_2_room, df, 
+#         alternative = "two.sided")
+#is_3_room <- var.test(resale_price ~ is_3_room, df, 
+#         alternative = "two.sided")
+#is_4_room <- var.test(resale_price ~ is_4_room, df, 
+#         alternative = "two.sided")
+#is_5_room <- var.test(resale_price ~ is_5_room, df, 
+#         alternative = "two.sided")
+#is_executive <- var.test(resale_price ~ is_executive, df, 
+#         alternative = "two.sided")
+#is_north <- var.test(resale_price ~ is_north, df, 
+#         alternative = "two.sided")
+#is_south <- var.test(resale_price ~ is_south, df, 
+#         alternative = "two.sided")
+#is_west <- var.test(resale_price ~ is_west, df, 
+#         alternative = "two.sided")
 
 F_test_vals <- list(
   is_1_room = is_1_room,
@@ -375,8 +372,23 @@ cat("Corresponding p-value: ",p_vals[big_p])
      #    alternative = "two.sided")
 
 ```
+In the Lasso model the feature "is_5_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
-```{}
+```{r}
+ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
+                                         is_3_room +
+                                         is_4_room +
+                                         is_executive +
+                                         is_1_room +
+                                         is_north +
+                                         is_south +
+                                         is_west +
+                                         floor_area_sqm_std +
+                                         remaining_lease_std +
+                                         0, data = df)
+
+rsquared <- summary(ori_no_5_rooms)
+rsquared$r.squared
 ```
 
 ## Results
