@@ -42,6 +42,7 @@ library(corrplot)
 library(caret)
 library(tidyverse)
 library(gridExtra)
+library(car)
 
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
@@ -143,7 +144,7 @@ Note that for one-hot encoding on the columns `region` and `flat_type` , we can 
 housing <- housing %>% 
         dplyr::select(!c(is_east,is_multi_generation,town))
 
-##
+
 ```
 
 #### 2. Data Manipulation
@@ -216,7 +217,7 @@ grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price"
 
 We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
 
-## Methods
+### Methods
 
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
@@ -272,7 +273,6 @@ ridge_model <- glmnet(x = X_train, y = y_train, alpha = 0)
 # Extract coefficients from the ridge regression model
 coefficients <- coef(ridge_model)
 
-
 ```
 
 ```{r}
@@ -305,10 +305,67 @@ covid <- housing %>%
   filter(month >= "2020-04")
 ```
 
+### F-test for feature selection
+
+Using the F-test to understand the variability between the features in the data set, we want to select the features with most impact on our y variable.
+
+```{r}
+# ANOVA - This is giving high RSE, meaning there is a lot of unexplained variability.
+anova_test <- aov(resale_price ~ is_1_room + 
+                    is_2_room + 
+                    is_3_room + 
+                    is_4_room + 
+                    is_5_room + 
+                    is_executive +
+                    is_north +
+                    is_south +
+                    is_west +
+                    floor_area_sqm_std +
+                    remaining_lease_std, housing)
+anova_test
+
+# F-test on each features with 2 levels
+is_2_room <- var.test(resale_price ~ is_1_room, housing, 
+         alternative = "two.sided")
+is_2_room <- var.test(resale_price ~ is_2_room, housing, 
+         alternative = "two.sided")
+is_3_room <- var.test(resale_price ~ is_3_room, housing, 
+         alternative = "two.sided")
+is_4_room <- var.test(resale_price ~ is_4_room, housing, 
+         alternative = "two.sided")
+is_5_room <- var.test(resale_price ~ is_5_room, housing, 
+         alternative = "two.sided")
+is_executive <- var.test(resale_price ~ is_executive, housing, 
+         alternative = "two.sided")
+is_north <- var.test(resale_price ~ is_north, housing, 
+         alternative = "two.sided")
+is_south <- var.test(resale_price ~ is_south, housing, 
+         alternative = "two.sided")
+is_west <- var.test(resale_price ~ is_west, housing, 
+         alternative = "two.sided")
+
+# More than two levels, won't run with F-test.
+#floor_area_sqm_std <- var.test(resale_price ~ floor_area_sqm_std, housing, 
+     #    alternative = "two.sided")
+#remaining_lease_std <- var.test(resale_price ~ remaining_lease_std, housing, 
+     #    alternative = "two.sided")
+
+```
+
+
+
+
 ## Results 
 
 ## Discussion 
 
 ### Limitations and Future Work
 
+
+
 ##### Reference
+
+
+
+
+
