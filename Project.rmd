@@ -148,8 +148,6 @@ Note that for one-hot encoding on the columns `region` and `flat_type` , we can 
 ```{r}
 housing <- housing %>% 
         dplyr::select(!c(is_east,is_multi_generation,town))
-
-
 ```
 
 #### 2. Data Manipulation
@@ -301,10 +299,10 @@ We will filter all dates before April 2020 as that was when the Singaporean gove
 
 ```{r}
 pre_covid <- housing %>% 
-  filter(month < "2020-04")
+  filter(month < "2020-04-01")
 
 covid <- housing %>% 
-  filter(month >= "2020-04")
+  filter(month >= "2020-04-01")
 ```
 
 ### F-test for feature selection
