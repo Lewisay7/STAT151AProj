@@ -27,7 +27,7 @@ Our data collection process began with an open web research on the housing marke
 We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
 ```{r libraries, include=FALSE}
-
+# Loading the necessary packages for this report
 library(MASS)
 library(glmnet)
 if (!requireNamespace("caret", quietly = TRUE)) {
@@ -43,36 +43,42 @@ library(caret)
 library(tidyverse)
 library(gridExtra)
 library(car)
+```
 
+```{r}
+# Reading the csv file of our data
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
 ### Data Inspection
 
 ```{r}
-#NA values in cols
+# Checking for NA values in our data
 na_counts <- colSums(is.na(housing))
-
-# 
 any_na <- any(na_counts > 0)
 
 cat("Datasets contains NA values : ",any_na)
 ```
 
-There are no null values in the dataset, so it is clean.
+We have found that there are no null values in the dataset, and so it is clean for further analyses that will be conducted for this report.
 
 ```{r}
+# Inspecting the data
 glimpse(housing)
 ```
 
-Upon our first inspection of the data, we will be using the `resale_price` as the response variable, and the columns `flat_type,floor_area_sqm,remaining_lease,town` to serve as the predictors.
+Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. As for our predictors, we will be using the columns `flat_type,floor_area_sqm,remaining_lease,town`.
 
 ```{r}
+# Selecting the necessary columns for our analysis
+# Modifying the time variable into a more easily usable data type
 housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
                               remaining_lease,resale_price) %>% 
             mutate(month = parse_date(month,format="%Y-%m"))
 
 ```
+
+Another thing to note for this dataset is that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
 
 #### 1. One-hot-encoding
 
@@ -94,16 +100,15 @@ housing <- housing %>%
 
 ```
 
-Also, we noted that for `town`, there is too many distinct values:
+We also must note that for `town`, there are too many distinct values:
 
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
 
-Thus, we will categorize the different towns of Singapore into NSEW regions, and further apply one-hot encoding as done above.
+In order to remedy this in a way that will be better utilized for our model, we will categorize the different towns of Singapore into NSEW (North, South, East, West) regions, and further apply one-hot encoding as done above since it is a categorical variable.
 
 ```{r}
-
 # Function to categorize towns into NSEW regions
 categorize_town <- function(town) {
   north <- c("ANG MO KIO", "SEMBAWANG", "SENGKANG", "WOODLANDS", "YISHUN","BISHAN")
