@@ -293,17 +293,6 @@ coefficients <- coef(ridge_model)
 # ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
 ```
 
-### Subsetting our dataset
-
-We will filter all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic.
-
-```{r}
-pre_covid <- housing %>% 
-  filter(month < "2020-04-01")
-
-covid <- housing %>% 
-  filter(month >= "2020-04-01")
-```
 
 ### F-test for feature selection
 
@@ -325,24 +314,24 @@ anova_test <- aov(resale_price ~ is_1_room +
 
 
 # F-test on each features with 2 levels
-#is_1_room <- var.test(resale_price ~ is_1_room, df, 
-#         alternative = "two.sided")
-#is_2_room <- var.test(resale_price ~ is_2_room, df, 
-#         alternative = "two.sided")
-#is_3_room <- var.test(resale_price ~ is_3_room, df, 
-#         alternative = "two.sided")
-#is_4_room <- var.test(resale_price ~ is_4_room, df, 
-#         alternative = "two.sided")
-#is_5_room <- var.test(resale_price ~ is_5_room, df, 
-#         alternative = "two.sided")
-#is_executive <- var.test(resale_price ~ is_executive, df, 
-#         alternative = "two.sided")
-#is_north <- var.test(resale_price ~ is_north, df, 
-#         alternative = "two.sided")
-#is_south <- var.test(resale_price ~ is_south, df, 
-#         alternative = "two.sided")
-#is_west <- var.test(resale_price ~ is_west, df, 
-#         alternative = "two.sided")
+is_1_room <- var.test(resale_price ~ is_1_room, df, 
+         alternative = "two.sided")
+is_2_room <- var.test(resale_price ~ is_2_room, df, 
+         alternative = "two.sided")
+is_3_room <- var.test(resale_price ~ is_3_room, df, 
+         alternative = "two.sided")
+is_4_room <- var.test(resale_price ~ is_4_room, df, 
+         alternative = "two.sided")
+is_5_room <- var.test(resale_price ~ is_5_room, df, 
+         alternative = "two.sided")
+is_executive <- var.test(resale_price ~ is_executive, df, 
+         alternative = "two.sided")
+is_north <- var.test(resale_price ~ is_north, df, 
+         alternative = "two.sided")
+is_south <- var.test(resale_price ~ is_south, df, 
+         alternative = "two.sided")
+is_west <- var.test(resale_price ~ is_west, df, 
+         alternative = "two.sided")
 
 F_test_vals <- list(
   is_1_room = is_1_room,
@@ -375,6 +364,7 @@ cat("Corresponding p-value: ",p_vals[big_p])
      #    alternative = "two.sided")
 
 ```
+
 In the Lasso model the feature "is_5_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
 ```{r}
@@ -392,6 +382,63 @@ ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room +
 
 rsquared <- summary(ori_no_5_rooms)
 rsquared$r.squared
+```
+
+# Regression Analysis on the Effects of COVID-19 on the Housing Market in Singapore
+
+Now that we have performed ANOVA and F-test for feature selection and determined which variables to utilize in our model, we can move forward with further analyzing the effects of COVID-19 on the housing market in Singapore.
+
+### Subsetting our dataset
+
+We will begin by filtering all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic. This date was chosen based on the following information: 
+
+1. The first COVID-19 case in Singapore was confirmed on January 23, 2020.
+2. COVID-19 clusters in the population were recorded in late March and early April 2020.
+3. Singapore enacted the "COVID-19 Control Order" in April 3, 2020 and announced the "circuit breaker lockdown," which was a set of stringent preventive measures to curb the spread of COVID-19.
+
+With all this information in mind, we believe that April 2020 would be the best date to choose as the boundary when subsetting our data into pre-COVID and COVID time periods.
+
+```{r}
+# Subsetting our original dataset into the two time periods
+pre_covid <- housing %>% 
+  filter(month < "2020-04-01")
+
+covid <- housing %>% 
+  filter(month >= "2020-04-01")
+```
+
+### Running Linear Regression on Both Periods
+
+```{r}
+# Linear Regression on Pre-Covid Data
+pre_covid_lm <- lm(log(resale_price) ~ is_2_room + 
+     is_3_room +
+     is_4_room +
+     is_executive +
+     is_1_room +
+     is_north +
+     is_south +
+     is_west +
+     floor_area_sqm_std +
+     remaining_lease_std +
+     0, data = pre_covid)
+
+# Linear Regression on Covid Period Data
+covid_lm <- lm(log(resale_price) ~ is_2_room + 
+     is_3_room +
+     is_4_room +
+     is_executive +
+     is_1_room +
+     is_north +
+     is_south +
+     is_west +
+     floor_area_sqm_std +
+     remaining_lease_std +
+     0, data = covid)
+
+pre_covid_lm
+covid_lm
+
 ```
 
 ## Results
