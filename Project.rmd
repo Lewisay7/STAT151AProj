@@ -436,15 +436,24 @@ covid_lm <- lm(log(resale_price) ~ is_2_room +
      remaining_lease_std +
      0, data = covid)
 
-pre_covid_lm
-covid_lm
+summary(pre_covid_lm)
+summary(covid_lm)
 
 ```
 
-## Results
+## Results and Discussion
 
-## Discussion
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
 
 ### Limitations and Future Work
 
+
+
 ##### Reference
+
+Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg.  https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view  
+
+Origin of data set for Singaporean homes. Kaggle.com.
+https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook
+
+
