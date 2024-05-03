@@ -471,7 +471,7 @@ housing_dat <- housing %>%
 
 ```{r}
 # SENGKANG
-sk <- housing %>% dplyr::select(town,flat_type,flat_model) %>% 
+sk <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm, resale_price) %>% 
   dplyr::filter(town == "SENGKANG")
 
 sk_flat_type <- table(sk$flat_type)
@@ -485,7 +485,7 @@ sk_flat_model[sk_modelmost]
 
 ```{r}
 # PUNGGOL
-pg <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm) %>% 
+pg <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm, resale_price) %>% 
   dplyr::filter(town == "PUNGGOL")
 
 pg_flat_type <- table(pg$flat_type)
@@ -499,7 +499,7 @@ pg_flat_model[pg_modelmost]
 
 ```{r}
 # WOODLANDS
-wl <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm) %>% 
+wl <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm, resale_price) %>% 
   dplyr::filter(town == "WOODLANDS")
 
 wl_flat_type <- table(wl$flat_type)
@@ -511,6 +511,56 @@ wl_modelmost <- order(wl_flat_model, decreasing = TRUE)[1]
 wl_flat_model[wl_modelmost]
 
 ```
+
+```{r}
+# Linear Regression for Sengkang
+sk <- sk %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
+sk_lm <- lm(log(resale_price) ~ floor_area_sqm, data = sk)
+
+summary(sk_lm)
+
+ggplot(data = sk, aes(x = floor_area_sqm, y = log(resale_price))) + 
+  geom_point() +
+  stat_smooth(method = "lm")
+```
+
+```{r}
+pg <- pg %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
+pg_lm <- lm(resale_price ~ floor_area_sqm, data = pg)
+
+summary(pg_lm)
+
+ggplot(data = pg, aes(x = floor_area_sqm, y = resale_price)) + 
+  geom_point() +
+  stat_smooth(method = "lm")
+```
+
+```{r}
+wl <- wl %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
+wl_lm <- lm(resale_price ~ floor_area_sqm, data = wl)
+
+summary(wl_lm)
+
+ggplot(data = wl, aes(x = floor_area_sqm, y = resale_price)) + 
+  geom_point() +
+  stat_smooth(method = "lm")
+```
+```{r}
+houses <- housing_dat %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
+
+houses_lm <- lm(resale_price ~ floor_area_sqm, data = houses)
+
+summary(houses_lm)
+
+
+ggplot(data = houses, aes(x = floor_area_sqm, y = resale_price)) + 
+  geom_point() +
+  lines(houses_lm$fitted.values)
+
+plot(houses_lm$fitted.values)
+  
+```
+
 
 =======
 Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg.  https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view  
