@@ -457,6 +457,7 @@ housing_dat <- housing %>%
 ```
 
 ## Identifying Most Popular Flat Model and Type
+
 ```{r}
 # SENGKANG
 sk <- housing %>% dplyr::select(town,flat_type,flat_model) %>% 
