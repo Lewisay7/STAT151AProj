@@ -72,7 +72,7 @@ Upon our first inspection of the data, we will be using the `resale_price` as th
 ```{r}
 # Selecting the necessary columns for our analysis
 # Modifying the time variable into a more easily usable data type
-housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,
+housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_model,
                               remaining_lease,resale_price) %>% 
             mutate(month = parse_date(month,format="%Y-%m"))
 
@@ -200,19 +200,19 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
 #### 4. Log transform
 
 ```{r}
-id <- sample(nrow(housing),7000)
-sample_housing <- housing[id,]
-
-p1 <- ggplot(sample_housing) + 
-        geom_point(aes(x=floor_area_sqm_std,y=resale_price),
-                   size=0.5,position="identity") + 
-        theme_minimal()
-p2 <- ggplot(sample_housing) + 
-        geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),
-                   size=0.5,position="identity") + 
-        theme_minimal()
-
-grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+# id <- sample(nrow(housing),7000)
+# sample_housing <- housing[id,]
+# 
+# p1 <- ggplot(sample_housing) + 
+#         geom_point(aes(x=floor_area_sqm_std,y=resale_price),
+#                    size=0.5,position="identity") + 
+#         theme_minimal()
+# p2 <- ggplot(sample_housing) + 
+#         geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),
+#                    size=0.5,position="identity") + 
+#         theme_minimal()
+# 
+# grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
 
 
 
@@ -252,40 +252,40 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 ```
 
 ```{r}
-# Set seed for reproducibility 
-set.seed(123)  
-# Create an index for splitting the data 
-split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)  
-X <- dplyr::select(df,!resale_price)  
-X_train <- X[split,] 
-X_test <- as.matrix(X[-split,]) 
-y_train <- df$resale_price[split] 
-y_test <- df$resale_price[-split]  
-# Fit Ridge model 
-ridge <- glmnet::glmnet(x = X_train, y = y_train, alpha = 0)   
-yhat_ridge <- predict(ridge, newx = X_test) 
-lambda_ridge <- ridge$lambda 
-# Min MAE 
-mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean) 
-
-#col mean for each lambda  
-min_ridge <- which.min(mae_ridge) #index corresponding to min MAE 
-min_lambda_ridge <- lambda_ridge[min_ridge]  
-coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs 
-lagged_features <- as.numeric(which(coef_min_ridge != 0)) 
-print("Lagged features present in the MAE-optimal ridge model:")  
-
-# Fit lasso model 
-lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)   
-yhat_lasso <- predict(lasso, newx = X_test) 
-lambda_lasso <- lasso$lambda # Min MAE 
-mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean) 
-#col mean for each lambda  
-min_lasso <- which.min(mae_lasso) #index corresponding to min MAE 
-min_lambda_lasso <- lambda_lasso[min_lasso]  
-coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso]) 
-#Corresponding indices of the non-zero coefs 
-coef_min_lasso
+# # Set seed for reproducibility 
+# set.seed(123)  
+# # Create an index for splitting the data 
+# split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)  
+# X <- dplyr::select(df,!resale_price)  
+# X_train <- X[split,] 
+# X_test <- as.matrix(X[-split,]) 
+# y_train <- df$resale_price[split] 
+# y_test <- df$resale_price[-split]  
+# # Fit Ridge model 
+# ridge <- glmnet::glmnet(x = X_train, y = y_train, alpha = 0)   
+# yhat_ridge <- predict(ridge, newx = X_test) 
+# lambda_ridge <- ridge$lambda 
+# # Min MAE 
+# mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean) 
+# 
+# #col mean for each lambda  
+# min_ridge <- which.min(mae_ridge) #index corresponding to min MAE 
+# min_lambda_ridge <- lambda_ridge[min_ridge]  
+# coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs 
+# lagged_features <- as.numeric(which(coef_min_ridge != 0)) 
+# print("Lagged features present in the MAE-optimal ridge model:")  
+# 
+# # Fit lasso model 
+# lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)   
+# yhat_lasso <- predict(lasso, newx = X_test) 
+# lambda_lasso <- lasso$lambda # Min MAE 
+# mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean) 
+# #col mean for each lambda  
+# min_lasso <- which.min(mae_lasso) #index corresponding to min MAE 
+# min_lambda_lasso <- lambda_lasso[min_lasso]  
+# coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso]) 
+# #Corresponding indices of the non-zero coefs 
+# coef_min_lasso
 ```
 
 
