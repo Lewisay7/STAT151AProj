@@ -18,6 +18,7 @@ This consequence of the pandemic is not unique to the United States economy and 
 
 Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
 
+
 ## Data
 
 Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
@@ -46,7 +47,7 @@ library(car)
 ```
 
 ```{r}
-# Reading the csv file of our data
+#DATA
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
@@ -63,11 +64,11 @@ cat("Datasets contains NA values : ",any_na)
 We have found that there are no null values in the dataset, and so it is clean for further analyses that will be conducted for this report.
 
 ```{r}
-# Inspecting the data
+# Inspection
 glimpse(housing)
 ```
 
-Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. As for our predictors, we will be using the columns `flat_type,floor_area_sqm,remaining_lease,town`.
+Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. 
 
 ```{r}
 # Selecting the necessary columns for our analysis
@@ -147,7 +148,7 @@ Note that for one-hot encoding on the columns `region` and `flat_type` , we can 
 
 ```{r}
 # housing <- housing %>% 
-#         dplyr::select(!c(is_east,is_multi_generation,town))
+#         dplyr::select(!c(is_east,is_multi_generation))
 ```
 
 #### 2. Data Manipulation
@@ -182,37 +183,37 @@ housing <- housing %>%
 #### 3. Standardizing Predictor Columns
 
 ```{r}
-#Standardizing predictor columns
+# Standardizing predictor columns
 # X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
 #       scale() %>% as.data.frame()
 # colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
 # 
-# housing <- cbind(housing,X) %>% 
+# housing <- cbind(housing,X) %>%
 #   dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
 ```
 
 ```{r}
 corr_mat<- cor(housing[sapply(housing, is.numeric)])
 corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
-         tl.col = "black", tl.srt = 45)
+         tl.col = "black", tl.srt = 45,addCoef.col = "black")
 ```
 
 #### 4. Log transform
 
 ```{r}
-# id <- sample(nrow(housing),7000)
-# sample_housing <- housing[id,]
-# 
-# p1 <- ggplot(sample_housing) + 
-#         geom_point(aes(x=floor_area_sqm_std,y=resale_price),
-#                    size=0.5,position="identity") + 
-#         theme_minimal()
-# p2 <- ggplot(sample_housing) + 
-#         geom_point(aes(x=floor_area_sqm_std,y=log(resale_price)),
-#                    size=0.5,position="identity") + 
-#         theme_minimal()
-# 
-# grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+id <- sample(nrow(housing),7000)
+sample_housing <- housing[id,]
+
+p1 <- ggplot(sample_housing) +
+        geom_point(aes(x=floor_area_sqm,y=resale_price),
+                   size=0.5,position="identity") +
+        theme_minimal()
+p2 <- ggplot(sample_housing) +
+        geom_point(aes(x=floor_area_sqm,y=log(resale_price)),
+                   size=0.5,position="identity") +
+        theme_minimal()
+
+grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
 
 
 
@@ -251,6 +252,7 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 
 ```
 
+Ridge and Lasso
 ```{r}
 # # Set seed for reproducibility 
 # set.seed(123)  
@@ -289,18 +291,7 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 ```
 
 
-```{r}
-# # Perform Ridge regression # 
-# ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0) 
-# predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed 
-# # Select the index with best lambda value. 
-# mae_ridge <- apply(abs(yhat_ridge - y[second_half]),2,mean) 
-# min_lambda <- ridge_model$lambda %>%                 
-#                   as.vector %>%                     
-#                     which.min 
-# best_lambda <- ridge_model$lambda[min_lambda] 
-# best_lambda
-```
+
 
 ### F-test for feature selection
 
@@ -308,62 +299,62 @@ Using the F-test to understand the variability between the features in the data 
 
 ```{r}
 # ANOVA - This is giving high RSE, meaning there is a lot of unexplained variability.
-anova_test <- aov(resale_price ~ is_1_room + 
-                    is_2_room + 
-                    is_3_room + 
-                    is_4_room + 
-                    is_5_room + 
-                    is_executive +
-                    is_north +
-                    is_south +
-                    is_west +
-                    floor_area_sqm_std +
-                    remaining_lease_std, df)
-
-
-# F-test on each features with 2 levels
-is_1_room <- var.test(resale_price ~ is_1_room, df, 
-         alternative = "two.sided")
-is_2_room <- var.test(resale_price ~ is_2_room, df, 
-         alternative = "two.sided")
-is_3_room <- var.test(resale_price ~ is_3_room, df, 
-         alternative = "two.sided")
-is_4_room <- var.test(resale_price ~ is_4_room, df, 
-         alternative = "two.sided")
-is_5_room <- var.test(resale_price ~ is_5_room, df, 
-         alternative = "two.sided")
-is_executive <- var.test(resale_price ~ is_executive, df, 
-         alternative = "two.sided")
-is_north <- var.test(resale_price ~ is_north, df, 
-         alternative = "two.sided")
-is_south <- var.test(resale_price ~ is_south, df, 
-         alternative = "two.sided")
-is_west <- var.test(resale_price ~ is_west, df, 
-         alternative = "two.sided")
-
-F_test_vals <- list(
-  is_1_room = is_1_room,
-  is_2_room = is_2_room,
-  is_3_room = is_3_room,
-  is_4_room = is_4_room,
-  is_5_room = is_5_room,
-  is_executive = is_executive,
-  is_north = is_north,
-  is_south = is_south,
-  is_west = is_west
-)
-
-# Extract p-values
-p_vals <- sapply(F_test_vals, function(result) {
-  result$p.value
-})
-
-# Check if any p-value is less than a significance level (e.g., 0.05)
-any(p_vals > 0.05)
-big_p <- which(p_vals>0.05)
-
-cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
-cat("Corresponding p-value: ",p_vals[big_p])
+# anova_test <- aov(resale_price ~ is_1_room + 
+#                     is_2_room + 
+#                     is_3_room + 
+#                     is_4_room + 
+#                     is_5_room + 
+#                     is_executive +
+#                     is_north +
+#                     is_south +
+#                     is_west +
+#                     floor_area_sqm_std +
+#                     remaining_lease_std, df)
+# 
+# 
+# # F-test on each features with 2 levels
+# is_1_room <- var.test(resale_price ~ is_1_room, df, 
+#          alternative = "two.sided")
+# is_2_room <- var.test(resale_price ~ is_2_room, df, 
+#          alternative = "two.sided")
+# is_3_room <- var.test(resale_price ~ is_3_room, df, 
+#          alternative = "two.sided")
+# is_4_room <- var.test(resale_price ~ is_4_room, df, 
+#          alternative = "two.sided")
+# is_5_room <- var.test(resale_price ~ is_5_room, df, 
+#          alternative = "two.sided")
+# is_executive <- var.test(resale_price ~ is_executive, df, 
+#          alternative = "two.sided")
+# is_north <- var.test(resale_price ~ is_north, df, 
+#          alternative = "two.sided")
+# is_south <- var.test(resale_price ~ is_south, df, 
+#          alternative = "two.sided")
+# is_west <- var.test(resale_price ~ is_west, df, 
+#          alternative = "two.sided")
+# 
+# F_test_vals <- list(
+#   is_1_room = is_1_room,
+#   is_2_room = is_2_room,
+#   is_3_room = is_3_room,
+#   is_4_room = is_4_room,
+#   is_5_room = is_5_room,
+#   is_executive = is_executive,
+#   is_north = is_north,
+#   is_south = is_south,
+#   is_west = is_west
+# )
+# 
+# # Extract p-values
+# p_vals <- sapply(F_test_vals, function(result) {
+#   result$p.value
+# })
+# 
+# # Check if any p-value is less than a significance level (e.g., 0.05)
+# any(p_vals > 0.05)
+# big_p <- which(p_vals>0.05)
+# 
+# cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
+# cat("Corresponding p-value: ",p_vals[big_p])
 
 # More than two levels, won't run with F-test.
 #floor_area_sqm_std <- var.test(resale_price ~ floor_area_sqm_std, housing, 
@@ -376,20 +367,20 @@ cat("Corresponding p-value: ",p_vals[big_p])
 In the Lasso model the feature "is_5_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
 ```{r}
-ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
-                                         is_3_room +
-                                         is_4_room +
-                                         is_executive +
-                                         is_1_room +
-                                         is_north +
-                                         is_south +
-                                         is_west +
-                                         floor_area_sqm_std +
-                                         remaining_lease_std +
-                                         0, data = df)
-
-rsquared <- summary(ori_no_5_rooms)
-rsquared$r.squared
+# ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
+#                                          is_3_room +
+#                                          is_4_room +
+#                                          is_executive +
+#                                          is_1_room +
+#                                          is_north +
+#                                          is_south +
+#                                          is_west +
+#                                          floor_area_sqm_std +
+#                                          remaining_lease_std +
+#                                          0, data = df)
+# 
+# rsquared <- summary(ori_no_5_rooms)
+# rsquared$r.squared
 ```
 
 # Regression Analysis on the Effects of COVID-19 on the Housing Market in Singapore
@@ -419,33 +410,33 @@ covid <- housing %>%
 
 ```{r}
 # Linear Regression on Pre-Covid Data
-pre_covid_lm <- lm(log(resale_price) ~ is_2_room + 
-     is_3_room +
-     is_4_room +
-     is_executive +
-     is_1_room +
-     is_north +
-     is_south +
-     is_west +
-     floor_area_sqm_std +
-     remaining_lease_std +
-     0, data = pre_covid)
-
-# Linear Regression on Covid Period Data
-covid_lm <- lm(log(resale_price) ~ is_2_room + 
-     is_3_room +
-     is_4_room +
-     is_executive +
-     is_1_room +
-     is_north +
-     is_south +
-     is_west +
-     floor_area_sqm_std +
-     remaining_lease_std +
-     0, data = covid)
-
-summary(pre_covid_lm)
-summary(covid_lm)
+# pre_covid_lm <- lm(log(resale_price) ~ is_2_room + 
+#      is_3_room +
+#      is_4_room +
+#      is_executive +
+#      is_1_room +
+#      is_north +
+#      is_south +
+#      is_west +
+#      floor_area_sqm_std +
+#      remaining_lease_std +
+#      0, data = pre_covid)
+# 
+# # Linear Regression on Covid Period Data
+# covid_lm <- lm(log(resale_price) ~ is_2_room + 
+#      is_3_room +
+#      is_4_room +
+#      is_executive +
+#      is_1_room +
+#      is_north +
+#      is_south +
+#      is_west +
+#      floor_area_sqm_std +
+#      remaining_lease_std +
+#      0, data = covid)
+# 
+# summary(pre_covid_lm)
+# summary(covid_lm)
 
 ```
 
@@ -463,103 +454,33 @@ After sub-setting the data into two categories (pre-covid and post-covid) and ru
 ## Filtering Our Data for the Top 3 Populous Towns in Singapore
 
 ```{r}
+randomTown <- sample(unique(housing$town),13,replace=FALSE)
 housing_dat <- housing %>% 
-  dplyr::filter(town == "SENGKANG" | town == "PUNGGOL" | town == "WOODLANDS")
-```
+  dplyr::filter(town %in% randomTown & month == "2019-04-01")
+randomTown
 
-## Identifying Most Popular Flat Model and Type
+top_model <- names(sort(table(housing_dat$flat_model), decreasing = TRUE)[1])
+top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
 
-```{r}
-# SENGKANG
-sk <- housing %>% dplyr::filter(town == "SENGKANG")
+housing_dat <- housing_dat %>% 
+                  filter(flat_model == top_model & flat_type ==top_type)
 
-sk_flat_type <- table(sk$flat_type)
-sk_typemost <- order(sk_flat_type, decreasing = TRUE)[1]
-sk_flat_type[sk_typemost]
-
-sk_flat_model <- table(sk$flat_model)
-sk_modelmost <- order(sk_flat_model, decreasing = TRUE)[1]
-sk_flat_model[sk_modelmost]
-```
-
-```{r}
-# PUNGGOL
-pg <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm, resale_price) %>% 
-  dplyr::filter(town == "PUNGGOL")
-
-pg_flat_type <- table(pg$flat_type)
-pg_typemost <- order(pg_flat_type, decreasing = TRUE)[1]
-pg_flat_type[pg_typemost]
-
-pg_flat_model <- table(pg$flat_model)
-pg_modelmost <- order(pg_flat_model, decreasing = TRUE)[1]
-pg_flat_model[pg_modelmost]
-```
-
-```{r}
-# WOODLANDS
-wl <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm, resale_price) %>% 
-  dplyr::filter(town == "WOODLANDS")
-
-wl_flat_type <- table(wl$flat_type)
-wl_typemost <- order(wl_flat_type, decreasing = TRUE)[1]
-wl_flat_type[wl_typemost]
-
-wl_flat_model <- table(wl$flat_model)
-wl_modelmost <- order(wl_flat_model, decreasing = TRUE)[1]
-wl_flat_model[wl_modelmost]
-
-```
-
-```{r}
-# Linear Regression for Sengkang
-sk <- sk %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
-sk_lm <- lm(log(resale_price) ~ floor_area_sqm, data = sk)
-
-summary(sk_lm)
-
-ggplot(data = sk, aes(x = floor_area_sqm, y = log(resale_price))) + 
-  geom_point() +
-  stat_smooth(method = "lm")
-```
-
-```{r}
-pg <- pg %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
-pg_lm <- lm(resale_price ~ floor_area_sqm, data = pg)
-
-summary(pg_lm)
-
-ggplot(data = pg, aes(x = floor_area_sqm, y = resale_price)) + 
-  geom_point() +
-  stat_smooth(method = "lm")
-```
-
-```{r}
-wl <- wl %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
-wl_lm <- lm(resale_price ~ floor_area_sqm, data = wl)
-
-summary(wl_lm)
-
-ggplot(data = wl, aes(x = floor_area_sqm, y = resale_price)) + 
-  geom_point() +
-  stat_smooth(method = "lm")
-```
-
-
-```{r}
-houses <- housing_dat %>% dplyr::filter(flat_type == "4 ROOM" & flat_model == "Model A")
-
-houses_lm <- lm(resale_price ~ floor_area_sqm, data = houses)
+housing_lm <- lm(log(resale_price) ~ floor_area_sqm, data = housing_dat)
 
 summary(houses_lm)
 
+housing_dat$predicted <- predict(housing_lm)
 
-ggplot(data = houses, aes(x = floor_area_sqm, y = resale_price)) + 
+# Plot the scatter plot and the line representing the linear regression model
+ggplot(data = housing_dat, aes(x = floor_area_sqm, y = log(resale_price))) + 
   geom_point() +
-  lines(houses_lm$fitted.values)
+  geom_line(aes(y = predicted), color = "blue") +
+  labs(title = "Scatter plot with linear regression line",
+       x = "Floor area (sqm)",
+       y = "Resale price")
 
-plot(houses_lm$fitted.values)
-  
+
+
 ```
 
 
