@@ -10,13 +10,11 @@ output:
 
 ## Introduction
 
-According to the Federal Reserve Board of the United States, the effects of the COVID-19 pandemic on the U.S. housing market have led to a rapid increase in housing prices with almost \$9 trillion in the wealth of owner occupied housing between the years 2020-2022. From the perspective of a prospective homeowner, the median housing price in the United States has nearly tripled between 1992 to 2021 with the largest spike in housing prices occurring during after the pandemic.
-
-This consequence of the pandemic is not unique to the United States economy and instead, is omnipresent all throughout the world. With the effects of the pandemic taken into consideration, we are motivated by this recent event to see how the theory of linear modelling could be applied in order to better understand how it affects the price of housing across a large population. In particular, we aim to do this with a country that is smaller relative to the United States on the country of Singapore. Throughout this report, we will attempt to understand the effects of COVID-19 and housing prices utilizing techniques such as linear regression, ridge and lasso models, and the model's effectiveness using cross-validation.
+In many developed nations across the world, the real estate sector is an area of valuable business prospects due to the high demand of good land. Within the real estate sector, residential homes are a commodity extremely sought after and utilized, but are also incredibly big investments. In the lens of a real estate investor and prospective homeowner, such an investment requires a myriad of factors to consider in order to determine the best returns. With this in mind, it would be worthwhile to explore statistical approaches to assist with it.
 
 ## Problem Description
 
-Our research objective is to gain understanding of the effect COVID-19 had on the Singaporean housing market. We aim to create an efficient and concise model that gives us an answer to the question: how do the resale prices differ between the years of 2017-2019 and 2020-2022? In addition, we will analyze the original set of housing metric indicators provided from the data set given to us from Kaggle and determine if we can refine the number of indicators to a minimum. Making use of statistical analysis techniques such as Ridge and Lasso regularization, we aim to extract the most important predictors that can still effectively provide us an understanding of the resale prices of Singaporean homes.
+For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling such as linear regression techniques, ridge and lasso regularization, and cross-validation. 
 
 ## Data
 
