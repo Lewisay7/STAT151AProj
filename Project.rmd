@@ -459,7 +459,7 @@ After sub-setting the data into two categories (pre-covid and post-covid) and ru
 
 ##### Reference
 
-<<<<<<< HEAD
+
 ## Filtering Our Data for the Top 3 Populous Towns in Singapore
 
 ```{r}
@@ -517,6 +517,6 @@ Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg
 
 Origin of data set for Singaporean homes. Kaggle.com.
 https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook
->>>>>>> refs/remotes/origin/main
+
 
 
