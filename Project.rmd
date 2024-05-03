@@ -448,3 +448,51 @@ covid_lm
 ### Limitations and Future Work
 
 ##### Reference
+```{r}
+# SENGKANG
+sk <- housing %>% dplyr::select(town,flat_type,flat_model) %>% 
+  dplyr::filter(town == "SENGKANG")
+
+sk_flat_type <- table(sk$flat_type)
+sk_typemost <- order(sk_flat_type, decreasing = TRUE)[1]
+sk_flat_type[sk_typemost]
+
+sk_flat_model <- table(sk$flat_model)
+sk_modelmost <- order(sk_flat_model, decreasing = TRUE)[1]
+sk_flat_model[sk_modelmost]
+```
+
+```{r}
+# PUNGGOL
+pg <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm) %>% 
+  dplyr::filter(town == "PUNGGOL")
+
+pg_flat_type <- table(pg$flat_type)
+pg_typemost <- order(pg_flat_type, decreasing = TRUE)[1]
+pg_flat_type[pg_typemost]
+
+pg_flat_model <- table(pg$flat_model)
+pg_modelmost <- order(pg_flat_model, decreasing = TRUE)[1]
+pg_flat_model[pg_modelmost]
+```
+
+```{r}
+# WOODLANDS
+wl <- housing %>% dplyr::select(town,flat_type,flat_model, floor_area_sqm) %>% 
+  dplyr::filter(town == "WOODLANDS")
+
+wl_flat_type <- table(wl$flat_type)
+wl_typemost <- order(wl_flat_type, decreasing = TRUE)[1]
+wl_flat_type[wl_typemost]
+
+wl_flat_model <- table(wl$flat_model)
+wl_modelmost <- order(wl_flat_model, decreasing = TRUE)[1]
+wl_flat_model[wl_modelmost]
+
+```
+
+```{r}
+housing_dat <- housing %>% 
+  dplyr::filter(town == "SENGKANG" | town == "PUNGGOL" | town == "WOODLANDS")
+```
+
