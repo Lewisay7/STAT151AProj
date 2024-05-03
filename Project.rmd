@@ -251,48 +251,56 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 
 ```
 
-
 ```{r}
-# Set seed for reproducibility
-set.seed(123)
+# Set seed for reproducibility 
+set.seed(123)  
+# Create an index for splitting the data 
+split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)  
+X <- dplyr::select(df,!resale_price)  
+X_train <- X[split,] 
+X_test <- as.matrix(X[-split,]) 
+y_train <- df$resale_price[split] 
+y_test <- df$resale_price[-split]  
+# Fit Ridge model 
+ridge <- glmnet::glmnet(x = X_train, y = y_train, alpha = 0)   
+yhat_ridge <- predict(ridge, newx = X_test) 
+lambda_ridge <- ridge$lambda 
+# Min MAE 
+mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean) 
 
-# Create an index for splitting the data
-split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)
+#col mean for each lambda  
+min_ridge <- which.min(mae_ridge) #index corresponding to min MAE 
+min_lambda_ridge <- lambda_ridge[min_ridge]  
+coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs 
+lagged_features <- as.numeric(which(coef_min_ridge != 0)) 
+print("Lagged features present in the MAE-optimal ridge model:")  
 
-# Split the data into training and test sets
-train<- df[split, ]
-test <- df[-split, ]
-
-X_train <- train %>% dplyr::select(!resale_price)
-y_train <- train$resale_price
-
-# Fit Ridge model
-ridge_model <- glmnet(x = X_train, y = y_train, alpha = 0)
-
-
-# Extract coefficients from the ridge regression model
-coefficients <- coef(ridge_model)
-
+# Fit lasso model 
+lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)   
+yhat_lasso <- predict(lasso, newx = X_test) 
+lambda_lasso <- lasso$lambda # Min MAE 
+mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean) 
+#col mean for each lambda  
+min_lasso <- which.min(mae_lasso) #index corresponding to min MAE 
+min_lambda_lasso <- lambda_lasso[min_lasso]  
+coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso]) 
+#Corresponding indices of the non-zero coefs 
+coef_min_lasso
 ```
 
+
 ```{r}
-
-# # Create an X matrix that represents the data frame above, but in linear perspective
-
-# Perform Ridge regression
-# ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0)
-# #predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed
-# 
-# # Select the index with best lambda value.
-# min_lambda <- ridge_model$lambda %>% 
-#                 as.vector %>% 
-#                     which.min
-# best_lambda <- ridge_model$lambda[min_lambda]
+# # Perform Ridge regression # 
+# ridge_model <- glmnet(X[,-ncol(X)], X[,ncol(X)], alpha = 0) 
+# predictions <- predict.glm(ridge_model, newdata = X[,-ncol(X)])  # Adjust s (lambda) as needed 
+# # Select the index with best lambda value. 
+# mae_ridge <- apply(abs(yhat_ridge - y[second_half]),2,mean) 
+# min_lambda <- ridge_model$lambda %>%                 
+#                   as.vector %>%                     
+#                     which.min 
+# best_lambda <- ridge_model$lambda[min_lambda] 
 # best_lambda
-# 
-# ridge_best <-  glmnet(X, y, alpha = 0,s=best_lambda)
 ```
-
 
 ### F-test for feature selection
 
@@ -436,19 +444,22 @@ covid_lm <- lm(log(resale_price) ~ is_2_room +
      remaining_lease_std +
      0, data = covid)
 
-pre_covid_lm
-covid_lm
+summary(pre_covid_lm)
+summary(covid_lm)
 
 ```
 
-## Results
+## Results and Discussion
 
-## Discussion
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
 
 ### Limitations and Future Work
 
+
+
 ##### Reference
 
+<<<<<<< HEAD
 ## Filtering Our Data for the Top 3 Populous Towns in Singapore
 
 ```{r}
@@ -501,5 +512,11 @@ wl_flat_model[wl_modelmost]
 
 ```
 
+=======
+Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg.  https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view  
+
+Origin of data set for Singaporean homes. Kaggle.com.
+https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook
+>>>>>>> refs/remotes/origin/main
 
 
