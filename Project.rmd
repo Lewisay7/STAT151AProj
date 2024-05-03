@@ -448,6 +448,15 @@ covid_lm
 ### Limitations and Future Work
 
 ##### Reference
+
+## Filtering Our Data for the Top 3 Populous Towns in Singapore
+
+```{r}
+housing_dat <- housing %>% 
+  dplyr::filter(town == "SENGKANG" | town == "PUNGGOL" | town == "WOODLANDS")
+```
+
+## Identifying Most Popular Flat Model and Type
 ```{r}
 # SENGKANG
 sk <- housing %>% dplyr::select(town,flat_type,flat_model) %>% 
@@ -491,8 +500,5 @@ wl_flat_model[wl_modelmost]
 
 ```
 
-```{r}
-housing_dat <- housing %>% 
-  dplyr::filter(town == "SENGKANG" | town == "PUNGGOL" | town == "WOODLANDS")
-```
+
 
