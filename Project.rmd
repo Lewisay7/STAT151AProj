@@ -9,17 +9,17 @@ output:
 
 ## Introduction
 
-In many developed nations across the world, the real estate sector is an area of valuable business prospects due to the high demand of good land. Within the real estate sector, residential homes are a commodity extremely sought after and utilized, but are also incredibly big investments. In the lens of a real estate investor and prospective homeowner, such an investment requires a myriad of factors to consider in order to determine the best returns. With this in mind, it would be worthwhile to explore statistical approaches to assist with it. In this project, we aim to understand the Singaporean housing market and its trends (if any) from the years 2017-2022, coincidentally also when the global pandemic, Covid-19 took place.
+In many developed nations across the world, the real estate sector is an area of valuable business prospects due to the high demand of good land. Within the real estate sector, residential homes are a commodity extremely sought after and utilized, but are also incredibly big investments. In the lens of a real estate investor and prospective homeowner, such an investment requires a myriad of factors to consider in order to determine the best returns. With this in mind, it would be worthwhile to explore statistical approaches to assist with it. In this project, we aim to understand the Singaporean housing market and its trends (if any) from the years 2017-2022, which coincidentally involves the effects of the COVID-19 pandemic
 
 ## Problem Description
 
-For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling such as linear regression techniques, ridge and lasso regularization, and cross-validation. We will analyze how in general housing prices may have shifted based on state of housing (housing type, size, and town) and whether or not this time frame had a significant impact of resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing Covid-19 as the reason for any of our findings.
+For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling which will mainly comprise of linear regression techniques. We will analyze how generally, housing prices may have shifted based on some features on the state of housing (housing type, size, and town) and whether or not they had a significant impact on resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing COVID-19 as the reason for any of our findings and instead, attempt to account for that by taking into account inflation that may have occured during that time.
 
 ## Data
 
 Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
 
-### EDA + Data Preprocessing
+### 1. Exploratory Data Analysis and  Data Preprocessing
 
 We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
@@ -43,13 +43,13 @@ library(car)
 ```
 
 ```{r}
-#DATA
+# Data from the Housing and Development Board of Singapore
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
-### 1. Data Inspection
+### Data Inspection
 
-```{r}
+```{r, echo=FALSE}
 # Checking for NA values in our data
 na_counts <- colSums(is.na(housing))
 any_na <- any(na_counts > 0)
@@ -60,13 +60,13 @@ cat("Datasets contains NA values : ",any_na)
 We have found that there are no null values in the dataset, and so it is clean for further analyses that will be conducted for this report.
 
 ```{r}
-# Inspection
+# Inspection using the glimpse() function
 glimpse(housing)
 ```
 
 Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price.
 
-```{r}
+```{r, echo= FALSE}
 # Selecting the necessary columns for our analysis
 # Modifying the time variable into a more easily usable data type
 housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_model,
@@ -75,20 +75,33 @@ housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_mo
 
 ```
 
-We also must note that for `town`, there are too many distinct values:
+
+We also must note that for `town`, there are many distinct values:
+
+
 
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
 
+
+This is important to note as it may affect the effectiveness of our model which will aim to account for soon in this report.
+
 #### 2. Data Manipulation
 
-We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
+To better ease the formulation of our model, we decided to convert the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
 
-```{r}
-##Function to convert from years+ months to months
+```{r, echo=FALSE}
+# Converting the remaining lease from "year-month" to unit months
+
 extract_months <- function(duration_str) {
-    # Split into components
+  # Converts a string of dates in year-month format to just unit months
+  #
+  # Args:
+  #   duration_str: a string of dates in year-month format
+  #
+  # Returns: conversion of string to unit months
+    # Splitting the string
     components <- strsplit(duration_str, " ", perl = TRUE)[[1]]
     
     # Extract years and months (if available)
@@ -99,6 +112,7 @@ extract_months <- function(duration_str) {
     return(years * 12 + months)
 }
 
+# Applying conversion to our dataset
 housing <- housing %>% 
             rowwise() %>%
             mutate(remaining_lease_mth = extract_months(remaining_lease)) %>% 
@@ -106,11 +120,14 @@ housing <- housing %>%
 
 ```
 
-Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities".
+Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities". This main purpose for this adjustment is to account for the time variable since we recognize that COVID-19 could possibly have an effect on housing prices. We will be calculating the "real," or "relative" price of housing in Singapore, which in the field of Economics, is used to adjust for inflation. We will use data on the Consumer Price Index in Singapore provided by the Department of Statistics in Singapore.
 
-```{r}
 
+```{r, echo=FALSE}
+# Reading the CPI data
 cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
+
+# Filtering the CPI data for the relevant years
 cpi <- cpi %>%  
           filter (Variables == "Housing & Utilities") %>% 
           gather(MTH, Value, -Variables) %>% 
@@ -119,6 +136,7 @@ cpi <- cpi %>%
           select(!Variables) %>% 
           mutate(Value = as.double(Value))
 
+# Adding the CPI data to our housing data
 housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
             rename(cpi_val=Value) %>% 
             mutate(resale_adj = (resale_price/cpi_val) *100)
@@ -126,43 +144,47 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
 
 #### 3. Standardizing Predictor Columns. 
 
-Next, we standardize numeric columns to improve performance:  
+We noticed from inspecting our data that the variable "floor_area_sqm" which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to standardize these predictor columns in preparation for use later on in our model.
 
-```{r}
+```{r, echo=FALSE}
 # Standardizing predictor columns
 X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
       scale() %>% as.data.frame()
 colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
 
+# Adding the standardized predictors to our housing data
 housing <- cbind(housing,X) %>%
   dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
 ```
 
-```{r}
+And now, we will check the correlations of these variables with each other to see if there any indications of multicolinearity, so that we can be sure to account for later on when formulating our prediction model.
+
+```{r, echo=FALSE}
 corr_mat<- cor(housing[sapply(housing, is.numeric)])
 corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
          tl.col = "black", tl.srt = 45,addCoef.col = "black")
 ```
 
-#### 4. Log Transform and Plots
+#### 4. Log Transforming our Resale Data and their Plots
 
-We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
+Here, we beginning plotting our resale data with the 'floor_area_sqm_std' variable since we want to see how resale data is associated with the size of the home. Additionally, we elected to log transform our resale data and plotted it against the area of the home in square meters in order to reduce any possible skewness of the data. Below is the two plots side-by-side for comparison.
 
-```{r}
+```{r, echo=FALSE}
 id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
 p1 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=resale_adj),
                    size=0.5,position="identity") +
-        theme_minimal()
+        theme_minimal() +
+  labs(x="", y = "Adjusted Resale Price")
 p2 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=log(resale_adj)),
                    size=0.5,position="identity") +
-        theme_minimal()
+        theme_minimal() +
+  labs(x="",y = "Log of Adjusted Resale Price")
 
-
-grid.arrange(p1,p2,nrow=2,top="Comparison of log(resale_price) and resale_price")
+grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Price", bottom= "Standardized FLoor Area in Square Meters")
 
 ```
 
