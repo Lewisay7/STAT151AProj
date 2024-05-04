@@ -208,7 +208,7 @@ grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Pr
 
 Now, we can begin formulating our prediction model. Based on previous attempts (that will be explained in the *Limitations* section of this report) we are choosing to select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore. Since there are 26 towns in total and the amount of data we have is very large, we want to take a smaller sample of our data and perform regression analysis on it instead of utilizing the whole dataset. While having more data is better than having too little, we realize that prediction models for our scenario is very complicated and regression will likely not be able to capture many of the intricacies of the housing market.
 
-```{r}
+```{r, echo=FALSE}
 # Selecting random sample of towns in Singapore from the dataset
 set.seed(248)
 
@@ -267,7 +267,7 @@ ggplot(housing_dat) +
 
 ## Results and Discussion
 
-After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
+
 
 ### Limitations and Future Work
 
@@ -557,7 +557,7 @@ covid <- housing %>%
 # summary(covid_lm)
 
 ```
-
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
 ### References
 
 Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
