@@ -10,11 +10,11 @@ output:
 
 ## Introduction
 
-In many developed nations across the world, the real estate sector is an area of valuable business prospects due to the high demand of good land. Within the real estate sector, residential homes are a commodity extremely sought after and utilized, but are also incredibly big investments. In the lens of a real estate investor and prospective homeowner, such an investment requires a myriad of factors to consider in order to determine the best returns. With this in mind, it would be worthwhile to explore statistical approaches to assist with it.
+In many developed nations across the world, the real estate sector is an area of valuable business prospects due to the high demand of good land. Within the real estate sector, residential homes are a commodity extremely sought after and utilized, but are also incredibly big investments. In the lens of a real estate investor and prospective homeowner, such an investment requires a myriad of factors to consider in order to determine the best returns. With this in mind, it would be worthwhile to explore statistical approaches to assist with it. In this project, we aim to understand the Singaporean housing market and its trends (if any) from the years 2017-2022, coincidentally also when the global pandemic, Covid-19 took place.
 
 ## Problem Description
 
-For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling such as linear regression techniques, ridge and lasso regularization, and cross-validation. 
+For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling such as linear regression techniques, ridge and lasso regularization, and cross-validation. We will analyze how in general housing prices may have shifted based on state of housing (housing type, size, and town) and whether or not this time frame had a significant impact of resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing Covid-19 as the reason for any of our findings.
 
 
 ## Data
