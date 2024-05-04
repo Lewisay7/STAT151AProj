@@ -5,7 +5,6 @@ date: "April 10th 2024"
 author: "Michelle Vuong, Celina Mac, Lewis Chong"
 output:
   pdf_document: default
-  html_document: default
 ---
 
 ## Introduction
@@ -15,7 +14,6 @@ In many developed nations across the world, the real estate sector is an area of
 ## Problem Description
 
 For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling such as linear regression techniques, ridge and lasso regularization, and cross-validation. We will analyze how in general housing prices may have shifted based on state of housing (housing type, size, and town) and whether or not this time frame had a significant impact of resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing Covid-19 as the reason for any of our findings.
-
 
 ## Data
 
@@ -66,7 +64,7 @@ We have found that there are no null values in the dataset, and so it is clean f
 glimpse(housing)
 ```
 
-Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. 
+Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price.
 
 ```{r}
 # Selecting the necessary columns for our analysis
@@ -77,13 +75,11 @@ housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_mo
 
 ```
 
-
 We also must note that for `town`, there are too many distinct values:
 
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
-
 
 #### 2. Data Manipulation
 
@@ -110,8 +106,7 @@ housing <- housing %>%
 
 ```
 
-
-Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities". 
+Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities".
 
 ```{r}
 
@@ -129,18 +124,9 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
             mutate(resale_adj = (resale_price/cpi_val) *100)
 ```
 
+#### 3. Standardizing Predictor Columns. 
 
-```{r}
-# Scratch work
-# housing %>% group_by(month) %>% summarize(med = median(resale_adj)) %>% 
-#   ggplot() + 
-#   geom_line(aes(x=month,y=med))
-# housing %>% group_by(month) %>% summarize(med = median(resale_price)) %>% 
-#   ggplot() + 
-#   geom_line(aes(x=month,y=med))
-```
-
-#### 3. Standardizing Predictor Columns
+Next, we standardize numeric columns to improve performance:  
 
 ```{r}
 # Standardizing predictor columns
@@ -160,6 +146,8 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
 
 #### 4. Log Transform and Plots
 
+We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
+
 ```{r}
 id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
@@ -173,16 +161,14 @@ p2 <- ggplot(sample_housing) +
                    size=0.5,position="identity") +
         theme_minimal()
 
-grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+
+grid.arrange(p1,p2,nrow=2,top="Comparison of log(resale_price) and resale_price")
 
 ```
 
-We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
-
-
 ### 5. Methods
 
-To select the scope of our project, we select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore. 
+To select the scope of our project, we select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore.
 
 ```{r}
 set.seed(248)
@@ -206,7 +192,8 @@ summary(housing_lm)
 
 housing_dat$predicted <- predict(housing_lm)
 ```
-The summary statistics of our model give us an R^2 of 0.4562, and a model that claims a one unit increase in floor area square meter, the log adjusted resale price will increase by 0.244. Now to help us interpret, we will plot top visualize the linear regression model.
+
+The summary statistics of our model give us an R\^2 of 0.4562, and a model that claims a one unit increase in floor area square meter, the log adjusted resale price will increase by 0.244. Now to help us interpret, we will plot top visualize the linear regression model.
 
 ```{r}
 ggplot(data = housing_dat) + 
@@ -217,15 +204,13 @@ ggplot(data = housing_dat) +
        y = "Resale price (Adjusted) $")
 ```
 
-
-Next, we plot the residuals to ensure we can make assumptions on the normality of residuals. 
+Next, we plot the residuals to ensure we can make assumptions on the normality of residuals.
 
 ```{r}
 epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
 ggplot(epsilon) +
   geom_histogram(aes(x=resid))
 ```
-
 
 They look normally distributed, so we may proceed with the comparison of resale and predicted values.
 
@@ -234,22 +219,13 @@ ggplot(housing_dat) +
   geom_point(aes(x=log(resale_adj),y=predicted))
 ```
 
-
 ## Results and Discussion
 
 After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
 
 ### Limitations and Future Work
 
-
-
 ##### Reference
-
-
-
-
-
-
 
 =========
 
@@ -351,6 +327,7 @@ In order to evaluate the most statistically significant housing metrics and redu
 ```
 
 Ridge and Lasso
+
 ```{r}
 # # Set seed for reproducibility 
 # set.seed(123)  
@@ -387,7 +364,6 @@ Ridge and Lasso
 # #Corresponding indices of the non-zero coefs 
 # coef_min_lasso
 ```
-
 
 ### F-test for feature selection
 
@@ -460,7 +436,7 @@ Using the F-test to understand the variability between the features in the data 
 
 ```
 
-In the Lasso model the feature "is_5_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
+In the Lasso model the feature "is_5\_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
 ```{r}
 # ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
@@ -485,11 +461,11 @@ Now that we have performed ANOVA and F-test for feature selection and determined
 
 ### Subsetting our dataset
 
-We will begin by filtering all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic. This date was chosen based on the following information: 
+We will begin by filtering all dates before April 2020 as that was when the Singaporean government began enforcing preventive measures for the pandemic. This date was chosen based on the following information:
 
-1. The first COVID-19 case in Singapore was confirmed on January 23, 2020.
-2. COVID-19 clusters in the population were recorded in late March and early April 2020.
-3. Singapore enacted the "COVID-19 Control Order" in April 3, 2020 and announced the "circuit breaker lockdown," which was a set of stringent preventive measures to curb the spread of COVID-19.
+1.  The first COVID-19 case in Singapore was confirmed on January 23, 2020.
+2.  COVID-19 clusters in the population were recorded in late March and early April 2020.
+3.  Singapore enacted the "COVID-19 Control Order" in April 3, 2020 and announced the "circuit breaker lockdown," which was a set of stringent preventive measures to curb the spread of COVID-19.
 
 With all this information in mind, we believe that April 2020 would be the best date to choose as the boundary when subsetting our data into pre-COVID and COVID time periods.
 
@@ -536,22 +512,10 @@ covid <- housing %>%
 
 ```
 
-
-
-
-
-
-
-
-
 ### References
-Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg.  https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view  
 
-Origin of data set for Singaporean homes. Kaggle.com.
-https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook
+Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
 
-Singaporean Consumer Price Index. 
-https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights
+Origin of data set for Singaporean homes. Kaggle.com. <https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook>
 
-
-
+Singaporean Consumer Price Index. <https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights>
