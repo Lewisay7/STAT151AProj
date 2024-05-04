@@ -178,6 +178,24 @@ housing <- housing %>%
 
 ```
 
+#### Adjustments for inflation
+```{r}
+#https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights
+cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
+cpi <- cpi %>%  
+          filter (Variables == "Housing & Utilities") %>% 
+          gather(MTH, Value, -Variables) %>% 
+          mutate(MTH = parse_date(MTH,format= "%Y %b")) %>% 
+          filter(year(MTH) >= 2017 & year(MTH) <= 2022) %>% 
+          select(!Variables) %>% 
+          mutate(Value = as.double(Value))
+
+merged <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
+            rename(cpi=Value) %>% 
+            mutate(resale_adj = (resale_price/cpi) *100)
+```
+
+
 #### 3. Standardizing Predictor Columns
 
 ```{r}
