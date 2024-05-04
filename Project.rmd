@@ -19,7 +19,7 @@ For the purpose of this report, we will attempt to formulate an effective predic
 
 Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
 
-### 1. Exploratory Data Analysis and  Data Preprocessing
+# 1. Exploratory Data Analysis and  Data Preprocessing
 
 We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
@@ -45,9 +45,10 @@ library(car)
 ```{r}
 # Data from the Housing and Development Board of Singapore
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
+table(housing$flat_model)
 ```
 
-### Data Inspection
+## Data Inspection
 
 ```{r, echo=FALSE}
 # Checking for NA values in our data
@@ -64,7 +65,15 @@ We have found that there are no null values in the dataset, and so it is clean f
 glimpse(housing)
 ```
 
-Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price.
+Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. As for our potential regressors of interest, we are electing to utilize `month`, `town`, `flat_type`, `floor_area_sqm`, and `flat_model` variables and we will subset the data to only focus on these variables. These variables are defined as follows:
+
+- `month`: The month at which the information on the particular home is recorded.
+- `town`: The town this particular home is situated in.
+- `flat_type`: The type of home described as either 1, 2, 3, 4, or 5 rooms, executive, or multi-generation.
+- `floor_area_sqm`: The size of the home in regards to the area of the floor in squared meters.
+- `flat_model`: The model of the home described as either 2-room, 3Gen, Adjoined flat, Apartment, DBSS, Improved, Improved-Maisonette, Maisonette, Model A, Model A-Maisonette, Model A2, Multi Generation, New Generation, Premium, Apartment Premium, Apartment Loft, Premium Maisonette, Simplified, Standard, Terrace, Type S1, Type S2.
+
+The reason why we chose these variables in particular is because we believe they will be the most likely to have the most significant effect on housing resale price. This will be further explored as move on.
 
 ```{r, echo= FALSE}
 # Selecting the necessary columns for our analysis
@@ -87,7 +96,7 @@ cat("Distinct values for `town` :",length(unique(housing$town)))
 
 This is important to note as it may affect the effectiveness of our model which will aim to account for soon in this report.
 
-#### 2. Data Manipulation
+### 2. Data Manipulation
 
 To better ease the formulation of our model, we decided to convert the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
 
@@ -142,9 +151,9 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
             mutate(resale_adj = (resale_price/cpi_val) *100)
 ```
 
-#### 3. Standardizing Predictor Columns. 
+### 3. Standardizing Predictor Columns. 
 
-We noticed from inspecting our data that the variable "floor_area_sqm" which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to standardize these predictor columns in preparation for use later on in our model.
+We noticed from inspecting our data that the variable `floor_area_sqm` which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to standardize these predictor columns in preparation for use later on in our model.
 
 ```{r, echo=FALSE}
 # Standardizing predictor columns
@@ -165,41 +174,51 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
          tl.col = "black", tl.srt = 45,addCoef.col = "black")
 ```
 
-#### 4. Log Transforming our Resale Data and their Plots
+Upon analyzing the correlation plot above and further considering all the data manipulation and analysis we have done up until this point, we decided that we will look into the variable `floor_area_sqm_std` as our regressor for our model. This is because `resale_adj` and `floor_area_sqm_std` have the highest correlation with each other compared to the other variables of interest.
 
-Here, we beginning plotting our resale data with the 'floor_area_sqm_std' variable since we want to see how resale data is associated with the size of the home. Additionally, we elected to log transform our resale data and plotted it against the area of the home in square meters in order to reduce any possible skewness of the data. Below is the two plots side-by-side for comparison.
+### 4. Log Transforming our Resale Data and their Plots
+
+Here, we beginning plotting our resale data with the `floor_area_sqm_std` variable since we want to see how resale data is associated with the size of the home. Additionally, we elected to log transform our resale data and plotted it against the area of the home in square meters in order to reduce any possible skewness of the data. Below is the two plots side-by-side for comparison. Note that these plots were conducted by first taking a random sample of 7000 homes from the dataset to prevent overcrowding and better visualize if there is any association between `resale_adj` and `floor_area_sqm_std`.
 
 ```{r, echo=FALSE}
+# Taking a random sample of 7000 homes from our data
 id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
+# Creating scatterplot of the adjusted resale price and floor area
 p1 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=resale_adj),
                    size=0.5,position="identity") +
         theme_minimal() +
   labs(x="", y = "Adjusted Resale Price")
+
+# Creating scatterplot of the log adjusted resale price and floor area
 p2 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=log(resale_adj)),
                    size=0.5,position="identity") +
         theme_minimal() +
   labs(x="",y = "Log of Adjusted Resale Price")
 
+# Plotting the two scatterplots side-by-side
 grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Price", bottom= "Standardized FLoor Area in Square Meters")
 
 ```
 
 ### 5. Methods
 
-To select the scope of our project, we select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore.
+Now, we can begin formulating our prediction model. Based on previous attempts (that will be explained in the *Limitations* section of this report) we are choosing to select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore. Since there are 26 towns in total and the amount of data we have is very large, we want to take a smaller sample of our data and perform regression analysis on it instead of utilizing the whole dataset. While having more data is better than having too little, we realize that prediction models for our scenario is very complicated and regression will likely not be able to capture many of the intricacies of the housing market.
 
 ```{r}
+# Selecting random sample of towns in Singapore from the dataset
 set.seed(248)
 
 randomTown <- sample(unique(housing$town), 13, replace=FALSE)
 
+# Filtering the data based on the specific towns used
 housing_dat <- housing %>%
   dplyr::filter(town %in% randomTown)
 
+# Finding the most popular model and type of home for these towns
 top_model <- names(sort(table(housing_dat$flat_model), decreasing = TRUE)[1])
 top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
 
@@ -207,36 +226,41 @@ top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
 
 Of the thirteen towns, the top housing model is "Model A" and a house with "4 Rooms". Now that we know know the most populous buildings in the most populous towns, we will run our regression on the log adjusted resale prices that account for inflation.
 
-```{r}
+```{r, echo=FALSE}
+# Linear regression model for log adjusted resale price regressed on floor area
 housing_lm <- lm(log(resale_adj) ~ floor_area_sqm_std, data = housing_dat)
-
 summary(housing_lm)
 
+# Predicted values from the linear model
 housing_dat$predicted <- predict(housing_lm)
 ```
 
-The summary statistics of our model give us an R\^2 of 0.4562, and a model that claims a one unit increase in floor area square meter, the log adjusted resale price will increase by 0.244. Now to help us interpret, we will plot top visualize the linear regression model.
+The summary statistics of our model give us an R\^2 of 0.4562, and a model that claims a one unit increase in floor area square meter is predicted to result in the log adjusted resale price to increase by 0.244. For this scenario, we believe this interpretation of the coefficient for `floor_area_sqm_std` is valid to an extent as intuitively, a larger home would generally result in a higher price as it occupies more land. Below is a visualization of our model.
 
-```{r}
+```{r, echo=FALSE}
 ggplot(data = housing_dat) + 
   geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)),color="black") +
   geom_line(aes(x=floor_area_sqm_std,y = predicted), color = "blue") +
-  labs(title = "Scatter plot with linear regression line",
+  labs(title = "Scatter Plot with Linear Regression Line",
        x = "Floor area (sqm)",
-       y = "Resale price (Adjusted) $")
+       y = "Resale price (Adjusted) $")+
+  theme_minimal()
 ```
 
-Next, we plot the residuals to ensure we can make assumptions on the normality of residuals.
+Below is a histogram of the residuals from our regression model. From the looks of it, the residuals are roughly normally distributed and indicates that any normality assumption is likely to be true.
 
-```{r}
+```{r, echo=FALSE}
+# Residuals from Linear Model
 epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
+
+# Plotting histogram of our residuals
 ggplot(epsilon) +
   geom_histogram(aes(x=resid))
 ```
 
-They look normally distributed, so we may proceed with the comparison of resale and predicted values.
+And thus, we may proceed with the comparison of resale and predicted values.
 
-```{r}
+```{r, echo=FALSE}
 ggplot(housing_dat) + 
   geom_point(aes(x=log(resale_adj),y=predicted))
 ```
