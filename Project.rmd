@@ -190,9 +190,18 @@ cpi <- cpi %>%
           select(!Variables) %>% 
           mutate(Value = as.double(Value))
 
-merged <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
-            rename(cpi=Value) %>% 
-            mutate(resale_adj = (resale_price/cpi) *100)
+housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
+            rename(cpi_val=Value) %>% 
+            mutate(resale_adj = (resale_price/cpi_val) *100)
+
+
+
+# housing %>% group_by(month) %>% summarize(med = median(resale_adj)) %>% 
+#   ggplot() + 
+#   geom_line(aes(x=month,y=med))
+# housing %>% group_by(month) %>% summarize(med = median(resale_price)) %>% 
+#   ggplot() + 
+#   geom_line(aes(x=month,y=med))
 ```
 
 
@@ -200,12 +209,12 @@ merged <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
 
 ```{r}
 # Standardizing predictor columns
-# X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
-#       scale() %>% as.data.frame()
-# colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
-# 
-# housing <- cbind(housing,X) %>%
-#   dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
+X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
+      scale() %>% as.data.frame()
+colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
+
+housing <- cbind(housing,X) %>%
+  dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
 ```
 
 ```{r}
@@ -221,11 +230,11 @@ id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
 p1 <- ggplot(sample_housing) +
-        geom_point(aes(x=floor_area_sqm,y=resale_price),
+        geom_point(aes(x=floor_area_sqm,y=resale_adj),
                    size=0.5,position="identity") +
         theme_minimal()
 p2 <- ggplot(sample_housing) +
-        geom_point(aes(x=floor_area_sqm,y=log(resale_price)),
+        geom_point(aes(x=floor_area_sqm,y=log(resale_adj)),
                    size=0.5,position="identity") +
         theme_minimal()
 
@@ -245,11 +254,11 @@ In order to evaluate the most statistically significant housing metrics and redu
 
 df <- housing %>% dplyr::select(!month)
 
-ori <- lm(log(resale_price) ~ . + 0, data = df)
+ori <- lm(log(resale_adj) ~ . + 0, data = df)
 
 yhat <- predict(ori)
 
-y <- log(df$resale_price)
+y <- log(df$resale_adj)
 
 MSE_ori <- mean((y-yhat)^2)
 cat("MSE from the linear model: ", MSE_ori)
@@ -471,29 +480,42 @@ After sub-setting the data into two categories (pre-covid and post-covid) and ru
 
 ```{r}
 randomTown <- sample(unique(housing$town),13,replace=FALSE)
-housing_dat <- housing %>% 
-  dplyr::filter(town %in% randomTown & month == "2019-04-01")
+housing_dat <- housing %>%
+  dplyr::filter(town %in% randomTown)
 randomTown
+
 
 top_model <- names(sort(table(housing_dat$flat_model), decreasing = TRUE)[1])
 top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
+# 
+# housing_dat <- housing_dat %>%
+#                   filter(flat_model == top_model & flat_type ==top_type)
 
-housing_dat <- housing_dat %>% 
-                  filter(flat_model == top_model & flat_type ==top_type)
+housing_lm <- lm(log(resale_adj) ~ floor_area_sqm_std, data = housing_dat)
 
-housing_lm <- lm(log(resale_price) ~ floor_area_sqm, data = housing_dat)
-
-summary(houses_lm)
+summary(housing_lm)
 
 housing_dat$predicted <- predict(housing_lm)
 
+
 # Plot the scatter plot and the line representing the linear regression model
-ggplot(data = housing_dat, aes(x = floor_area_sqm, y = log(resale_price))) + 
-  geom_point() +
-  geom_line(aes(y = predicted), color = "blue") +
+ggplot(data = housing_dat) + 
+  geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)),color="black") +
+  geom_line(aes(x=floor_area_sqm_std,y = predicted), color = "blue") +
   labs(title = "Scatter plot with linear regression line",
        x = "Floor area (sqm)",
-       y = "Resale price")
+       y = "Resale price (Adjusted) $")
+
+
+#Assumptions on normality of residuals 
+epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
+ggplot(epsilon) +
+  geom_histogram(aes(x=resid))
+
+
+#Comparison of resale and predicted values
+ggplot(housing_dat) + 
+  geom_point(aes(x=log(resale_adj),y=predicted))
 
 
 
