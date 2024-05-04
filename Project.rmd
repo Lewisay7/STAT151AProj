@@ -51,7 +51,7 @@ housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 
 ### Data Inspection
 
-```{r}
+```{r, echo=FALSE}
 # Checking for NA values in our data
 na_counts <- colSums(is.na(housing))
 any_na <- any(na_counts > 0)
@@ -68,7 +68,7 @@ glimpse(housing)
 
 Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. 
 
-```{r}
+```{r, echo= FALSE}
 # Selecting the necessary columns for our analysis
 # Modifying the time variable into a more easily usable data type
 housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_model,
@@ -90,7 +90,7 @@ This is important to note as it may affect the effectiveness of our model which 
 
 To better ease the formulation of our model, we decided to convert the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
 
-```{r}
+```{r, echo=FALSE}
 # Converting the remaining lease from "year-month" to unit months
 
 extract_months <- function(duration_str) {
@@ -122,7 +122,7 @@ housing <- housing %>%
 
 Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities". This main purpose for this adjustment is to account for the time variable since we recognize that COVID-19 could possibly have an effect on housing prices. We will be calculating the "real," or "relative" price of housing in Singapore, which in the field of Economics, is used to adjust for inflation. We will use data on the Consumer Price Index in Singapore provided by the Department of Statistics in Singapore.
 
-```{r}
+```{r, echo=FALSE}
 # Reading the CPI data
 cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
 
@@ -142,7 +142,7 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
 ```
 
 
-```{r}
+```{r, echo=FALSE}
 # Scratch work
 # housing %>% group_by(month) %>% summarize(med = median(resale_adj)) %>% 
 #   ggplot() + 
@@ -156,7 +156,7 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
 
 We noticed from inspecting our data that the variable "floor_area_sqm" which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to standardize these predictor columns in preparation for use later on in our model.
 
-```{r}
+```{r, echo=FALSE}
 # Standardizing predictor columns
 X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
       scale() %>% as.data.frame()
@@ -169,7 +169,7 @@ housing <- cbind(housing,X) %>%
 
 And now, we will check the correlations of these variables with each other to see if there any indications of multicolinearity, so that we can be sure to account for later on when formulating our prediction model.
 
-```{r}
+```{r, echo=FALSE}
 corr_mat<- cor(housing[sapply(housing, is.numeric)])
 corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
          tl.col = "black", tl.srt = 45,addCoef.col = "black")
@@ -177,20 +177,24 @@ corrplot(corr_mat, method = "color", type = "upper", order ="hclust",
 
 #### 4. Log Transforming our Resale Data and their Plots
 
-```{r}
+Here, we beginning plotting our resale data with the 'floor_area_sqm_std' variable since we want to see how resale data is associated with the size of the home. Additionally, we elected to log transform our resale data and plotted it against the area of the home in square meters in order to reduce any possible skewness of the data. Below is the two plots side-by-side for comparison.
+
+```{r, echo=FALSE}
 id <- sample(nrow(housing),7000)
 sample_housing <- housing[id,]
 
 p1 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=resale_adj),
                    size=0.5,position="identity") +
-        theme_minimal()
+        theme_minimal() +
+  labs(x="", y = "Adjusted Resale Price")
 p2 <- ggplot(sample_housing) +
         geom_point(aes(x=floor_area_sqm_std, y=log(resale_adj)),
                    size=0.5,position="identity") +
-        theme_minimal()
+        theme_minimal() +
+  labs(x="",y = "Log of Adjusted Resale Price")
 
-grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Price", bottom= "Standardized FLoor Area in Square Meters")
 
 ```
 
