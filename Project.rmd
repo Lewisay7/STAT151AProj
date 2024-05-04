@@ -49,7 +49,7 @@ library(car)
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
-### Data Inspection
+### 1. Data Inspection
 
 ```{r}
 # Checking for NA values in our data
@@ -77,6 +77,184 @@ housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_mo
 
 ```
 
+
+We also must note that for `town`, there are too many distinct values:
+
+```{r}
+cat("Distinct values for `town` :",length(unique(housing$town)))
+```
+
+
+#### 2. Data Manipulation
+
+We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
+
+```{r}
+##Function to convert from years+ months to months
+extract_months <- function(duration_str) {
+    # Split into components
+    components <- strsplit(duration_str, " ", perl = TRUE)[[1]]
+    
+    # Extract years and months (if available)
+    years <- as.numeric(components[1])
+    months <- ifelse(length(components) >= 3, as.numeric(components[length(components)-1]), 0)
+    
+    # Return total months
+    return(years * 12 + months)
+}
+
+housing <- housing %>% 
+            rowwise() %>%
+            mutate(remaining_lease_mth = extract_months(remaining_lease)) %>% 
+            dplyr::select(!remaining_lease)
+
+```
+
+
+Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities". 
+
+```{r}
+
+cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
+cpi <- cpi %>%  
+          filter (Variables == "Housing & Utilities") %>% 
+          gather(MTH, Value, -Variables) %>% 
+          mutate(MTH = parse_date(MTH,format= "%Y %b")) %>% 
+          filter(year(MTH) >= 2017 & year(MTH) <= 2022) %>% 
+          select(!Variables) %>% 
+          mutate(Value = as.double(Value))
+
+housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
+            rename(cpi_val=Value) %>% 
+            mutate(resale_adj = (resale_price/cpi_val) *100)
+```
+
+
+```{r}
+# Scratch work
+# housing %>% group_by(month) %>% summarize(med = median(resale_adj)) %>% 
+#   ggplot() + 
+#   geom_line(aes(x=month,y=med))
+# housing %>% group_by(month) %>% summarize(med = median(resale_price)) %>% 
+#   ggplot() + 
+#   geom_line(aes(x=month,y=med))
+```
+
+#### 3. Standardizing Predictor Columns
+
+```{r}
+# Standardizing predictor columns
+X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
+      scale() %>% as.data.frame()
+colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
+
+housing <- cbind(housing,X) %>%
+  dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
+```
+
+```{r}
+corr_mat<- cor(housing[sapply(housing, is.numeric)])
+corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
+         tl.col = "black", tl.srt = 45,addCoef.col = "black")
+```
+
+#### 4. Log Transform and Plots
+
+```{r}
+id <- sample(nrow(housing),7000)
+sample_housing <- housing[id,]
+
+p1 <- ggplot(sample_housing) +
+        geom_point(aes(x=floor_area_sqm_std, y=resale_adj),
+                   size=0.5,position="identity") +
+        theme_minimal()
+p2 <- ggplot(sample_housing) +
+        geom_point(aes(x=floor_area_sqm_std, y=log(resale_adj)),
+                   size=0.5,position="identity") +
+        theme_minimal()
+
+grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
+
+```
+
+We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
+
+
+### 5. Methods
+
+To select the scope of our project, we select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore. 
+
+```{r}
+set.seed(248)
+
+randomTown <- sample(unique(housing$town), 13, replace=FALSE)
+
+housing_dat <- housing %>%
+  dplyr::filter(town %in% randomTown)
+
+top_model <- names(sort(table(housing_dat$flat_model), decreasing = TRUE)[1])
+top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
+
+```
+
+Of the thirteen towns, the top housing model is "Model A" and a house with "4 Rooms". Now that we know know the most populous buildings in the most populous towns, we will run our regression on the log adjusted resale prices that account for inflation.
+
+```{r}
+housing_lm <- lm(log(resale_adj) ~ floor_area_sqm_std, data = housing_dat)
+
+summary(housing_lm)
+
+housing_dat$predicted <- predict(housing_lm)
+```
+The summary statistics of our model give us an R^2 of 0.4562, and a model that claims a one unit increase in floor area square meter, the log adjusted resale price will increase by 0.244. Now to help us interpret, we will plot top visualize the linear regression model.
+
+```{r}
+ggplot(data = housing_dat) + 
+  geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)),color="black") +
+  geom_line(aes(x=floor_area_sqm_std,y = predicted), color = "blue") +
+  labs(title = "Scatter plot with linear regression line",
+       x = "Floor area (sqm)",
+       y = "Resale price (Adjusted) $")
+```
+
+
+Next, we plot the residuals to ensure we can make assumptions on the normality of residuals. 
+
+```{r}
+epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
+ggplot(epsilon) +
+  geom_histogram(aes(x=resid))
+```
+
+
+They look normally distributed, so we may proceed with the comparison of resale and predicted values.
+
+```{r}
+ggplot(housing_dat) + 
+  geom_point(aes(x=log(resale_adj),y=predicted))
+```
+
+
+## Results and Discussion
+
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
+
+### Limitations and Future Work
+
+
+
+##### Reference
+
+
+
+
+
+
+
+=========
+
+All work prior to consultation:
+
 Another thing to note for this dataset is that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
 
 #### 1. One-hot-encoding
@@ -97,12 +275,6 @@ From the above summary, we see that the `flat_type` is a categorical variable. T
 #   dplyr::select(!flat_type)
 
 
-```
-
-We also must note that for `town`, there are too many distinct values:
-
-```{r}
-cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
 
 In order to remedy this in a way that will be better utilized for our model, we will categorize the different towns of Singapore into NSEW (North, South, East, West) regions, and further apply one-hot encoding as done above since it is a categorical variable.
@@ -149,130 +321,31 @@ Note that for one-hot encoding on the columns `region` and `flat_type` , we can 
 #         dplyr::select(!c(is_east,is_multi_generation))
 ```
 
-#### 2. Data Manipulation
-
-We will be converting the `remaining_lease` column that contains how long the lease is to be of unit months instead of the current year+month.
-
-```{r}
-
-##Function to convert from years+ months to months
-extract_months <- function(duration_str) {
-    # Split into components
-    components <- strsplit(duration_str, " ", perl = TRUE)[[1]]
-    
-    # Extract years and months (if available)
-    years <- as.numeric(components[1])
-    months <- ifelse(length(components) >= 3, as.numeric(components[length(components)-1]), 0)
-    
-    # Return total months
-    return(years * 12 + months)
-}
-
-housing <- housing %>% 
-            rowwise() %>%
-            mutate(remaining_lease_mth = extract_months(remaining_lease)) %>% 
-            dplyr::select(!remaining_lease)
-
-
-
-
-```
-
-#### Adjustments for inflation
-```{r}
-#https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights
-cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
-cpi <- cpi %>%  
-          filter (Variables == "Housing & Utilities") %>% 
-          gather(MTH, Value, -Variables) %>% 
-          mutate(MTH = parse_date(MTH,format= "%Y %b")) %>% 
-          filter(year(MTH) >= 2017 & year(MTH) <= 2022) %>% 
-          select(!Variables) %>% 
-          mutate(Value = as.double(Value))
-
-housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>% 
-            rename(cpi_val=Value) %>% 
-            mutate(resale_adj = (resale_price/cpi_val) *100)
-
-
-
-# housing %>% group_by(month) %>% summarize(med = median(resale_adj)) %>% 
-#   ggplot() + 
-#   geom_line(aes(x=month,y=med))
-# housing %>% group_by(month) %>% summarize(med = median(resale_price)) %>% 
-#   ggplot() + 
-#   geom_line(aes(x=month,y=med))
-```
-
-
-#### 3. Standardizing Predictor Columns
-
-```{r}
-# Standardizing predictor columns
-X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
-      scale() %>% as.data.frame()
-colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
-
-housing <- cbind(housing,X) %>%
-  dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
-```
-
-```{r}
-corr_mat<- cor(housing[sapply(housing, is.numeric)])
-corrplot(corr_mat, method = "color", type = "upper", order ="hclust", 
-         tl.col = "black", tl.srt = 45,addCoef.col = "black")
-```
-
-#### 4. Log transform
-
-```{r}
-id <- sample(nrow(housing),7000)
-sample_housing <- housing[id,]
-
-p1 <- ggplot(sample_housing) +
-        geom_point(aes(x=floor_area_sqm,y=resale_adj),
-                   size=0.5,position="identity") +
-        theme_minimal()
-p2 <- ggplot(sample_housing) +
-        geom_point(aes(x=floor_area_sqm,y=log(resale_adj)),
-                   size=0.5,position="identity") +
-        theme_minimal()
-
-grid.arrange(p1,p2,ncol=2,top="Comparison of log(resale_price) and resale_price")
-
-
-
-```
-
-We do a sample of 7000 on the original dataset, to argue that the increase of a small amount of floor area(sqm) doesn't result it a linear amount of resale price being added, but instead some non-linear increase in the price. This is equivalent to adding to a log of the resale prices. So we conclude that it results in better prediction if we do a regression on the log(resale price).
-
-### Methods
-
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
 
 ```{r}
 
-df <- housing %>% dplyr::select(!month)
-
-ori <- lm(log(resale_adj) ~ . + 0, data = df)
-
-yhat <- predict(ori)
-
-y <- log(df$resale_adj)
-
-MSE_ori <- mean((y-yhat)^2)
-cat("MSE from the linear model: ", MSE_ori)
-
-epsilon <- data.frame(resid=resid(ori),month=housing$month)
-
-residuals_means <- epsilon %>%
-  group_by(month) %>%
-  summarise(mean_residual = mean(resid))
-
-# Now you can plot the mean residuals against the months
-ggplot(residuals_means, aes(x = month, y = mean_residual)) +
-  geom_line() +
-  labs(x = "Month", y = "Mean Residuals", title = "Mean Residuals Over Time")
+# df <- housing %>% dplyr::select(!month)
+# 
+# ori <- lm(log(resale_adj) ~ . + 0, data = df)
+# 
+# yhat <- predict(ori)
+# 
+# y <- log(df$resale_adj)
+# 
+# MSE_ori <- mean((y-yhat)^2)
+# cat("MSE from the linear model: ", MSE_ori)
+# 
+# epsilon <- data.frame(resid=resid(ori),month=housing$month)
+# 
+# residuals_means <- epsilon %>%
+#   group_by(month) %>%
+#   summarise(mean_residual = mean(resid))
+# 
+# # Now you can plot the mean residuals against the months
+# ggplot(residuals_means, aes(x = month, y = mean_residual)) +
+#   geom_line() +
+#   labs(x = "Month", y = "Mean Residuals", title = "Mean Residuals Over Time")
 
 
 ```
@@ -314,8 +387,6 @@ Ridge and Lasso
 # #Corresponding indices of the non-zero coefs 
 # coef_min_lasso
 ```
-
-
 
 
 ### F-test for feature selection
@@ -465,68 +536,22 @@ covid <- housing %>%
 
 ```
 
-## Results and Discussion
-
-After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
-
-### Limitations and Future Work
 
 
 
-##### Reference
-
-
-## Filtering Our Data for the Top 3 Populous Towns in Singapore
-
-```{r}
-randomTown <- sample(unique(housing$town),13,replace=FALSE)
-housing_dat <- housing %>%
-  dplyr::filter(town %in% randomTown)
-randomTown
-
-
-top_model <- names(sort(table(housing_dat$flat_model), decreasing = TRUE)[1])
-top_type <- names(sort(table(housing_dat$flat_type), decreasing = TRUE)[1])
-# 
-# housing_dat <- housing_dat %>%
-#                   filter(flat_model == top_model & flat_type ==top_type)
-
-housing_lm <- lm(log(resale_adj) ~ floor_area_sqm_std, data = housing_dat)
-
-summary(housing_lm)
-
-housing_dat$predicted <- predict(housing_lm)
-
-
-# Plot the scatter plot and the line representing the linear regression model
-ggplot(data = housing_dat) + 
-  geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)),color="black") +
-  geom_line(aes(x=floor_area_sqm_std,y = predicted), color = "blue") +
-  labs(title = "Scatter plot with linear regression line",
-       x = "Floor area (sqm)",
-       y = "Resale price (Adjusted) $")
-
-
-#Assumptions on normality of residuals 
-epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
-ggplot(epsilon) +
-  geom_histogram(aes(x=resid))
-
-
-#Comparison of resale and predicted values
-ggplot(housing_dat) + 
-  geom_point(aes(x=log(resale_adj),y=predicted))
 
 
 
-```
 
 
-=======
+### References
 Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg.  https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view  
 
 Origin of data set for Singaporean homes. Kaggle.com.
 https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook
+
+Singaporean Consumer Price Index. 
+https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights
 
 
 
