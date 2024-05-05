@@ -13,7 +13,7 @@ In many developed nations across the world, the real estate sector is an area of
 
 ## Problem Description
 
-For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling which will mainly comprise of linear regression techniques. We will analyze how generally, housing prices may have shifted based on some features on the state of housing (housing type, size, and town) and whether or not they had a significant impact on resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing COVID-19 as the reason for any of our findings and instead, attempt to account for that by taking into account inflation that may have occured during that time.
+For the purpose of this report, we will attempt to formulate an effective prediction model for resale prices in the country of Singapore using the tools associated with linear modelling which will mainly comprise of linear regression techniques. We will analyze how generally, housing prices may have shifted based on some features on the state of housing (housing type, size, and town) and whether or not they had a significant impact on resale prices. While we will keep in mind as researchers that the global pandemic had occurred within the time frame we are controlling, we will not be directly referencing COVID-19 as the reason for any of our findings and instead, attempt to account for that by taking into account inflation that may have occurred during that time. Our leading question for this project will now be: Was there any change in the housing market for Singaporean homes in the years between 2017-2022 in the selected towns and their respective most popular home types and rooms?
 
 ## Data
 
@@ -84,10 +84,7 @@ housing <- housing %>% dplyr::select(month,town,flat_type,floor_area_sqm,flat_mo
 
 ```
 
-
 We also must note that for `town`, there are many distinct values:
-
-
 
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
@@ -239,11 +236,11 @@ The summary statistics of our model give us an R\^2 of 0.4562, and a model that 
 
 ```{r, echo=FALSE}
 ggplot(data = housing_dat) + 
-  geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)),color="black") +
-  geom_line(aes(x=floor_area_sqm_std,y = predicted), color = "blue") +
+  geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)), color="black") +
+  geom_line(aes(x=floor_area_sqm_std, y = predicted), color = "blue") +
   labs(title = "Scatter Plot with Linear Regression Line",
        x = "Floor area (sqm)",
-       y = "Resale price (Adjusted) $")+
+       y = "Resale price (Adjusted) $") +
   theme_minimal()
 ```
 
@@ -255,29 +252,46 @@ epsilon <- data.frame(resid=housing_lm$residuals,month=housing_dat$month)
 
 # Plotting histogram of our residuals
 ggplot(epsilon) +
-  geom_histogram(aes(x=resid))
+  geom_histogram(aes(x=resid)) +
+  labs(title = "Histogram of Residuals",
+       x = "Residuals",
+       y = "Frequency") +
+  theme_minimal()
 ```
 
-And thus, we may proceed with the comparison of resale and predicted values.
+And thus, we may proceed with the comparison of log resale prices with adjusted inflation and predicted values.
 
 ```{r, echo=FALSE}
 ggplot(housing_dat) + 
-  geom_point(aes(x=log(resale_adj),y=predicted))
+  geom_point(aes(x=log(resale_adj),y=predicted)) +
+  labs(title = "Scatter Plot of Predicted Resale prices and Log Adjusted Resale Prices",
+       x = "Log Adjusted Resale Price",
+       y = "Predicted Resale prices") +
+   theme_minimal()
 ```
 
-## Results and Discussion
+### Results and Discussion
 
-After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
+Based on our linear regression (lm()) model results and the plots above, it is somewhat reasonable to claim that the logged resale adjusted-for-inflation prices follow a linear trend. There are clearly horizontal trends and intense clustering in the plot right above, however, these problems will be addressed in the limitations of the extent of our project below. However, narrowing down to the scatter plot of floor area per square meter and adjusted resale prices, there is a slight increasing linear trend in the plot with large amounts of concentration between 0-2.5 square meters. This means that as the size of the home increases, so does the log of the resale prices. This makes sense intuitively due to the nature of homes, the larger they are, the more land they take up and the more you have to pay for the land.From our linear model summary with floor square meter as the only predictor, it produced to us a R squared value of 0.4298 which indicates it is not the best predictor, but after running f-tests on each of the other predictors given in our data set, this came out to be the most significant. When we checked our residuals given from our model, we noticed that the histogram was very close to being normally distributed which means that we achieved homoscedasticity and had a decent linear model with floor square meter as the predictor. This normality assumption also allowed us to make inference comments on the interpretation of our model.
+
 
 ### Limitations and Future Work
 
-##### Reference
+##### References
 
-=========
+Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
 
-All work prior to consultation:
+Origin of data set for Singaporean homes. Kaggle.com. <https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook>
 
-Another thing to note for this dataset is that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
+Singaporean Consumer Price Index. <https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights>
+
+
+
+Below is all work prior to our consultation (Thursday, 5/2/2024) and new formulated question. We did not want to delete all of our work prior to the consultation because our original question had been approved many weeks prior to the meeting before being advised that the question was not answerable with our given data set. However, we did learn many things about our categorical variables from this process and want to show them below.
+
+===
+
+Another thing to note for this data set is that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
 
 #### 1. One-hot-encoding
 
@@ -558,10 +572,8 @@ covid <- housing %>%
 
 ```
 
-### References
+## Results and Discussion
 
-Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
-
-Origin of data set for Singaporean homes. Kaggle.com. <https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook>
-
-Singaporean Consumer Price Index. <https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights>
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
+ 
+Did not work because high R^2 value did not match the high residual error.
