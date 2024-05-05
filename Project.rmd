@@ -294,17 +294,18 @@ We have noted for this data set that it contains a lot of categorical variables 
 From our data inspection, we see that `flat_type` is a categorical variable. Thus, we will applied one hot encoding on it for the model to regress.
 
 ```{r}
-# housing <- housing %>%
-#   mutate(
-#     is_2_room = ifelse(flat_type == "2 ROOM", 1, 0),
-#     is_3_room = ifelse(flat_type == "3 ROOM", 1, 0),
-#     is_4_room = ifelse(flat_type == "4 ROOM", 1, 0),
-#     is_5_room = ifelse(flat_type == "5 ROOM", 1, 0),
-#     is_executive = ifelse(flat_type == "EXECUTIVE", 1, 0),
-#     is_1_room = ifelse(flat_type == "1 ROOM", 1, 0),
-#     is_multi_generation = ifelse(flat_type == "MULTI-GENERATION", 1, 0)
-#   ) %>% 
-#   dplyr::select(!flat_type)
+housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
+housing <- housing %>%
+  mutate(
+    is_2_room = ifelse(flat_type == "2 ROOM", 1, 0),
+    is_3_room = ifelse(flat_type == "3 ROOM", 1, 0),
+    is_4_room = ifelse(flat_type == "4 ROOM", 1, 0),
+    is_5_room = ifelse(flat_type == "5 ROOM", 1, 0),
+    is_executive = ifelse(flat_type == "EXECUTIVE", 1, 0),
+    is_1_room = ifelse(flat_type == "1 ROOM", 1, 0),
+    is_multi_generation = ifelse(flat_type == "MULTI-GENERATION", 1, 0)
+  ) %>%
+  dplyr::select(!flat_type)
 
 
 ```
@@ -315,113 +316,129 @@ In order to remedy this in a way that will be better utilized for our model, we 
 
 ```{r}
 # Function to categorize towns into NSEW regions
-# categorize_town <- function(town) {
-#   north <- c("ANG MO KIO", "SEMBAWANG", "SENGKANG", "WOODLANDS", "YISHUN","BISHAN")
-#   south <- c("BUKIT MERAH", "BUKIT TIMAH", "CENTRAL AREA", "QUEENSTOWN")
-#   east <- c("BEDOK", "MARINE PARADE", "PASIR RIS", "TAMPINES")
-#   west <- c("BUKIT BATOK", "BUKIT PANJANG", "CHOA CHU KANG", "CLEMENTI", "JURONG EAST", "JURONG WEST", "KALLANG/WHAMPOA", "PUNGGOL", "SENGKANG", "TOA PAYOH", "SERANGOON", "GEYLANG", "HOUGANG")
-#   
-#   if (town %in% north) {
-#     return("North")
-#   } else if (town %in% south) {
-#     return("South")
-#   } else if (town %in% east) {
-#     return("East")
-#   } else if (town %in% west) {
-#     return("West")
-#   } else {
-#     return("Other")
-#   }
-# }
-# 
-# # Add a new column for NSEW region
-# housing <- housing %>%
-#   rowwise() %>%
-#   mutate(region = categorize_town(toupper(town))) %>% 
-#   mutate(
-#     is_north = ifelse(region == "North", 1, 0),
-#     is_south = ifelse(region == "South", 1, 0),
-#     is_west = ifelse(region == "West", 1, 0),
-#     is_east = ifelse(region == "East", 1, 0)
-#   ) %>% 
-#   dplyr::select(!region)
+categorize_town <- function(town) {
+  north <- c("ANG MO KIO", "SEMBAWANG", "SENGKANG", "WOODLANDS", "YISHUN","BISHAN")
+  south <- c("BUKIT MERAH", "BUKIT TIMAH", "CENTRAL AREA", "QUEENSTOWN")
+  east <- c("BEDOK", "MARINE PARADE", "PASIR RIS", "TAMPINES")
+  west <- c("BUKIT BATOK", "BUKIT PANJANG", "CHOA CHU KANG", "CLEMENTI", "JURONG EAST", "JURONG WEST", "KALLANG/WHAMPOA", "PUNGGOL", "SENGKANG", "TOA PAYOH", "SERANGOON", "GEYLANG", "HOUGANG")
+
+  if (town %in% north) {
+    return("North")
+  } else if (town %in% south) {
+    return("South")
+  } else if (town %in% east) {
+    return("East")
+  } else if (town %in% west) {
+    return("West")
+  } else {
+    return("Other")
+  }
+}
+
+# Add a new column for NSEW region
+housing <- housing %>%
+  rowwise() %>%
+  mutate(region = categorize_town(toupper(town))) %>%
+  mutate(
+    is_north = ifelse(region == "North", 1, 0),
+    is_south = ifelse(region == "South", 1, 0),
+    is_west = ifelse(region == "West", 1, 0),
+    is_east = ifelse(region == "East", 1, 0)
+  ) %>%
+  dplyr::select(!region)
 
 ```
 
 We noted that for one-hot encoding on the columns `region` and `flat_type` , we can just drop one of the columns as it can be identified by the rest of the columns, i.e `(is_north,is_south,is_west) = (0,0,0)`corresponds to the house being in the East Region.
 
 ```{r}
-# housing <- housing %>% 
-#         dplyr::select(!c(is_east,is_multi_generation))
+housing <- housing %>%
+        dplyr::select(!c(is_east,is_multi_generation))
 ```
 
 In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we  used regularization. We began with Ridge Regularization as shown below:
 
-```{r}
+Ridge and Lasso
 
-# df <- housing %>% dplyr::select(!month)
-# 
-# ori <- lm(log(resale_adj) ~ . + 0, data = df)
-# 
-# yhat <- predict(ori)
-# 
-# y <- log(df$resale_adj)
-# 
-# MSE_ori <- mean((y-yhat)^2)
-# cat("MSE from the linear model: ", MSE_ori)
-# 
-# epsilon <- data.frame(resid=resid(ori),month=housing$month)
-# 
-# residuals_means <- epsilon %>%
-#   group_by(month) %>%
-#   summarise(mean_residual = mean(resid))
-# 
-# # Now you can plot the mean residuals against the months
-# ggplot(residuals_means, aes(x = month, y = mean_residual)) +
-#   geom_line() +
-#   labs(x = "Month", y = "Mean Residuals", title = "Mean Residuals Over Time")
+```{r, cache=TRUE}
+# Setting up data for preliminary regression model
+df <- housing %>% dplyr::select(!month)
 
+# Linear Regression Model
+ori <- lm(log(resale_price) ~ . + 0, data = df)
+
+# Predicted Values of Regression Model
+yhat <- predict(ori)
 
 ```
 
-Ridge and Lasso
+```{r, echo=FALSE}
+# Finding Mean Squared Error of Our Regression Model
+y <- log(df$resale_price)
+
+MSE_ori <- mean((y-yhat)^2)
+cat("MSE from the linear model: ", MSE_ori)
+
+epsilon <- data.frame(resid=resid(ori),month=housing$month)
+
+epsilon$month <- as.Date(paste(epsilon$month, "01", sep = "-"))
+
+residuals_means <- epsilon %>%
+  group_by(month) %>%
+  summarise(mean_residual = mean(resid))
+
+
+# Now we can plot the mean residuals against the months
+ggplot(residuals_means, aes(x = month, y = mean_residual)) +
+  geom_line() +
+  labs(x = "Month", y = "Mean Residuals", title = "Mean Residuals Over Time")
+
+
+```
 
 ```{r}
 # # Set seed for reproducibility 
-# set.seed(123)  
+set.seed(123)
+
 # # Create an index for splitting the data 
-# split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)  
-# X <- dplyr::select(df,!resale_price)  
-# X_train <- X[split,] 
-# X_test <- as.matrix(X[-split,]) 
-# y_train <- df$resale_price[split] 
-# y_test <- df$resale_price[-split]  
-# # Fit Ridge model 
-# ridge <- glmnet::glmnet(x = X_train, y = y_train, alpha = 0)   
-# yhat_ridge <- predict(ridge, newx = X_test) 
-# lambda_ridge <- ridge$lambda 
+split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)
+X <- dplyr::select(df,!resale_price)
+X_train <- X[split,]
+X_test <- as.matrix(X[-split,])
+y_train <- df$resale_price[split]
+y_test <- df$resale_price[-split]
+
+# Fit Ridge model
+ridge <- glmnet::glmnet(x = X_train, y = y_train, alpha = 0)
+yhat_ridge <- predict(ridge, newx = X_test)
+lambda_ridge <- ridge$lambda
+
 # # Min MAE 
-# mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean) 
-# 
-# #col mean for each lambda  
-# min_ridge <- which.min(mae_ridge) #index corresponding to min MAE 
-# min_lambda_ridge <- lambda_ridge[min_ridge]  
-# coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs 
-# lagged_features <- as.numeric(which(coef_min_ridge != 0)) 
-# print("Lagged features present in the MAE-optimal ridge model:")  
-# 
+mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean)
+
+#Column mean for each lambda
+min_ridge <- which.min(mae_ridge) #index corresponding to min MAE
+min_lambda_ridge <- lambda_ridge[min_ridge]
+coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs
+lagged_features <- as.numeric(which(coef_min_ridge != 0))
+print("Lagged features present in the MAE-optimal ridge model:")
+
 # # Fit lasso model 
-# lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)   
-# yhat_lasso <- predict(lasso, newx = X_test) 
-# lambda_lasso <- lasso$lambda # Min MAE 
-# mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean) 
-# #col mean for each lambda  
-# min_lasso <- which.min(mae_lasso) #index corresponding to min MAE 
-# min_lambda_lasso <- lambda_lasso[min_lasso]  
-# coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso]) 
-# #Corresponding indices of the non-zero coefs 
-# coef_min_lasso
+lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)
+yhat_lasso <- predict(lasso, newx = X_test)
+lambda_lasso <- lasso$lambda # Min MAE
+mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean)
+
+# Column mean for each lambda
+min_lasso <- which.min(mae_lasso) #index corresponding to min MAE
+min_lambda_lasso <- lambda_lasso[min_lasso]
+coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso])
+
+#Corresponding indices of the non-zero coefficients
+coef_min_lasso
 ```
+
+
 
 ### F-test for feature selection
 
@@ -429,88 +446,89 @@ Using the F-test to understand the variability between the features in the data 
 
 ```{r}
 # ANOVA - This is giving high RSE, meaning there is a lot of unexplained variability.
-# anova_test <- aov(resale_price ~ is_1_room + 
-#                     is_2_room + 
-#                     is_3_room + 
-#                     is_4_room + 
-#                     is_5_room + 
-#                     is_executive +
-#                     is_north +
-#                     is_south +
-#                     is_west +
-#                     floor_area_sqm_std +
-#                     remaining_lease_std, df)
-# 
-# 
-# # F-test on each features with 2 levels
-# is_1_room <- var.test(resale_price ~ is_1_room, df, 
-#          alternative = "two.sided")
-# is_2_room <- var.test(resale_price ~ is_2_room, df, 
-#          alternative = "two.sided")
-# is_3_room <- var.test(resale_price ~ is_3_room, df, 
-#          alternative = "two.sided")
-# is_4_room <- var.test(resale_price ~ is_4_room, df, 
-#          alternative = "two.sided")
-# is_5_room <- var.test(resale_price ~ is_5_room, df, 
-#          alternative = "two.sided")
-# is_executive <- var.test(resale_price ~ is_executive, df, 
-#          alternative = "two.sided")
-# is_north <- var.test(resale_price ~ is_north, df, 
-#          alternative = "two.sided")
-# is_south <- var.test(resale_price ~ is_south, df, 
-#          alternative = "two.sided")
-# is_west <- var.test(resale_price ~ is_west, df, 
-#          alternative = "two.sided")
-# 
-# F_test_vals <- list(
-#   is_1_room = is_1_room,
-#   is_2_room = is_2_room,
-#   is_3_room = is_3_room,
-#   is_4_room = is_4_room,
-#   is_5_room = is_5_room,
-#   is_executive = is_executive,
-#   is_north = is_north,
-#   is_south = is_south,
-#   is_west = is_west
-# )
-# 
+ anova_test <- aov(resale_price ~ is_1_room +
+                     is_2_room +
+                    is_3_room +
+                    is_4_room +
+                     is_5_room +
+                     is_executive +
+                     is_north +
+                    is_south +
+                     is_west +
+                     floor_area_sqm +
+                     remaining_lease, df)
+
+
+# F-test on each features with 2 levels
+is_1_room <- var.test(resale_price ~ is_1_room, df,
+         alternative = "two.sided")
+is_2_room <- var.test(resale_price ~ is_2_room, df,
+         alternative = "two.sided")
+is_3_room <- var.test(resale_price ~ is_3_room, df,
+         alternative = "two.sided")
+is_4_room <- var.test(resale_price ~ is_4_room, df,
+         alternative = "two.sided")
+is_5_room <- var.test(resale_price ~ is_5_room, df,
+         alternative = "two.sided")
+is_executive <- var.test(resale_price ~ is_executive, df,
+         alternative = "two.sided")
+is_north <- var.test(resale_price ~ is_north, df,
+         alternative = "two.sided")
+is_south <- var.test(resale_price ~ is_south, df,
+         alternative = "two.sided")
+is_west <- var.test(resale_price ~ is_west, df,
+         alternative = "two.sided")
+
+F_test_vals <- list(
+  is_1_room = is_1_room,
+  is_2_room = is_2_room,
+  is_3_room = is_3_room,
+  is_4_room = is_4_room,
+  is_5_room = is_5_room,
+  is_executive = is_executive,
+  is_north = is_north,
+  is_south = is_south,
+  is_west = is_west
+)
+
 # # Extract p-values
-# p_vals <- sapply(F_test_vals, function(result) {
-#   result$p.value
-# })
-# 
+p_vals <- sapply(F_test_vals, function(result) {
+  result$p.value
+})
+
 # # Check if any p-value is less than a significance level (e.g., 0.05)
-# any(p_vals > 0.05)
-# big_p <- which(p_vals>0.05)
-# 
-# cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
-# cat("Corresponding p-value: ",p_vals[big_p])
+any(p_vals > 0.05)
+big_p <- which(p_vals>0.05)
+
+cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
+cat("Corresponding p-value: ",p_vals[big_p])
 
 # More than two levels, won't run with F-test.
-#floor_area_sqm_std <- var.test(resale_price ~ floor_area_sqm_std, housing, 
-     #    alternative = "two.sided")
-#remaining_lease_std <- var.test(resale_price ~ remaining_lease_std, housing, 
-     #    alternative = "two.sided")
+# floor_area_sqm <- var.test(resale_price ~ floor_area_sqm, housing,
+#    alternative = "two.sided")
+# remaining_lease <- var.test(resale_price ~ remaining_lease, housing,
+#    alternative = "two.sided")
 
 ```
 
 In the Lasso model the feature `is_5_room` has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
-```{r}
-# ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
-#                                          is_3_room +
-#                                          is_4_room +
-#                                          is_executive +
-#                                          is_1_room +
-#                                          is_north +
-#                                          is_south +
-#                                          is_west +
-#                                          floor_area_sqm_std +
-#                                          remaining_lease_std +
-#                                          0, data = df)
-# 
-# rsquared <- summary(ori_no_5_rooms)
-# rsquared$r.squared
+```{r, echo=FALSE, cache=TRUE}
+ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room +
+                                         is_3_room +
+                                         is_4_room +
+                                         is_executive +
+                                         is_1_room +
+                                         is_north +
+                                         is_south +
+                                         is_west +
+                                         floor_area_sqm +
+                                         remaining_lease +
+                                         0, data = df)
+
+rsquared <- summary(ori_no_5_rooms)
+rsquared$r.squared
+cat("R-squared for new regression is ", rsquared$r.squared)
 ```
 
 # Regression Analysis on the Effects of COVID-19 on the Housing Market in Singapore
@@ -527,7 +545,7 @@ We will begin by filtering all dates before April 2020 as that was when the Sing
 
 With all this information in mind, we believe that April 2020 would be the best date to choose as the boundary when subsetting our data into pre-COVID and COVID time periods.
 
-```{r}
+```{r, echo=FALSE}
 # Subsetting our original dataset into the two time periods
 pre_covid <- housing %>% 
   filter(month < "2020-04-01")
@@ -538,36 +556,38 @@ covid <- housing %>%
 
 ### Running Linear Regression on Both Periods
 
-```{r}
+```{r, echo=FALSE, cache=TRUE}
 # Linear Regression on Pre-Covid Data
-# pre_covid_lm <- lm(log(resale_price) ~ is_2_room + 
-#      is_3_room +
-#      is_4_room +
-#      is_executive +
-#      is_1_room +
-#      is_north +
-#      is_south +
-#      is_west +
-#      floor_area_sqm_std +
-#      remaining_lease_std +
-#      0, data = pre_covid)
-# 
-# # Linear Regression on Covid Period Data
-# covid_lm <- lm(log(resale_price) ~ is_2_room + 
-#      is_3_room +
-#      is_4_room +
-#      is_executive +
-#      is_1_room +
-#      is_north +
-#      is_south +
-#      is_west +
-#      floor_area_sqm_std +
-#      remaining_lease_std +
-#      0, data = covid)
-# 
-# summary(pre_covid_lm)
-# summary(covid_lm)
+pre_covid_lm <- lm(log(resale_price) ~ is_2_room +
+     is_3_room +
+     is_4_room +
+     is_executive +
+     is_1_room +
+     is_north +
+     is_south +
+     is_west +
+     floor_area_sqm +
+     remaining_lease +
+     0, data = pre_covid)
 
+# Linear Regression on Covid Period Data
+covid_lm <- lm(log(resale_price) ~ is_2_room +
+     is_3_room +
+     is_4_room +
+     is_executive +
+     is_1_room +
+     is_north +
+     is_south +
+     is_west +
+     floor_area_sqm +
+     remaining_lease +
+     0, data = covid)
+
+pre_rsquared <- summary(pre_covid_lm)$adj.r.squared
+covid_rsquared <- summary(covid_lm)$adj.r.squared
+
+cat("R-squared for Pre-COVID regression is ",pre_rsquared)
+cat("R-squared for COVID regression is ",covid_rsquared)
 ```
 
 ## Results and Discussion
