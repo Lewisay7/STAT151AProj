@@ -587,9 +587,7 @@ cat("R-squared for COVID regression is ",covid_rsquared)
 
 ## Results and Discussion
 
-After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
-
-Did not work because high R\^2 value did not match the high residual error.
+After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us that the model is not good because high R\^2 value did not match the high residual error.
 
 ==========
 
@@ -598,6 +596,8 @@ There were multiple issues with this attempt:
 1)  Having such a high $R^2$ on housing prices is surprising, and is an indication of potential overfitting. As mentioned before, there are a lot of features of a house that affect its price but are not captured in our regressors. Since our $R^2$ was 0.99, that indicates that there are no such features and is perhaps the case in our attempt.
 
 2)  The size of the residuals in the plot do not look consistent with an $R^2$ of 0.99. Residuals should not have a marked time trend which indicates a violation of the normality assumption and was clearly present in our plot. We have learned that it may be due to our neglect for controlling for important variables and/or we are not using a valuable predictor for predicting housing resale prices.
+
+Thus, we decided to reformulate our regression model taking these issues into account and following advice to control for confounding variables in our prediction model as shown above.
 
 ##### References
 
