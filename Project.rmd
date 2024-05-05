@@ -239,7 +239,7 @@ ggplot(data = housing_dat) +
   geom_point(aes(x = floor_area_sqm_std, y = log(resale_adj)), color="black") +
   geom_line(aes(x=floor_area_sqm_std, y = predicted), color = "blue") +
   labs(title = "Scatter Plot with Linear Regression Line",
-       x = "Floor area (sqm)",
+       x = "Standardized Floor Area",
        y = "Resale price (Adjusted) $") +
   theme_minimal()
 ```
@@ -277,25 +277,22 @@ Based on our linear regression (lm()) model results and the plots above, it is s
 
 ### Limitations and Future Work
 
-##### References
+The linear regression model we have above is unlikely to be considered a good prediction model for housing prices for many reasons. For one, we only utilized the size of the home in terms of the floor area in squared meters to formulate our prediction model using linear regression. As explained above, it makes sense intuitively why a larger home would generally result in a higher resale price compared to smaller homes. Additionally, we also controlled the other variables that would affect housing prices in our model which were the type of the flat and the model of the flat. In the end, we only really ended up with a model that depicts the relationship between the size of the home and the resale price of the home of a particular flat type and flat model, which in our case are 4 room Model A flats.
 
-Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
+The housing market is very complex and the factors that contribute to determining the sale price of homes includes more than just the size of the home which we unfortunately were unable to capture in our linear regression model with the tools we were equipped with at the extent of our knowledge on linear modelling.
 
-Origin of data set for Singaporean homes. Kaggle.com. <https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook>
-
-Singaporean Consumer Price Index. <https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights>
-
+We should note that an attempt had been made prior to the procedure and results we have gone through at the top in regards to formulating a prediction model that takes into account more than just the size of the home as predictors for housing resale price. We will now explain here:
 
 
 Below is all work prior to our consultation (Thursday, 5/2/2024) and new formulated question. We did not want to delete all of our work prior to the consultation because our original question had been approved many weeks prior to the meeting before being advised that the question was not answerable with our given data set. However, we did learn many things about our categorical variables from this process and want to show them below.
 
 ===
 
-Another thing to note for this data set is that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
+We have noted for this data set that it contains a lot of categorical variables and the variables that we have chosen also fall under this characterization and so we must employ a technique that will be able to translate our categorical variables into numerical data for the purpose of our models.
 
 #### 1. One-hot-encoding
 
-From the above summary, we see that the `flat_type` is a categorical variable. Thus,we will be apply one hot encoding on it for the model to regress.
+From our data inspection, we see that `flat_type` is a categorical variable. Thus, we will applied one hot encoding on it for the model to regress.
 
 ```{r}
 # housing <- housing %>%
@@ -313,7 +310,9 @@ From the above summary, we see that the `flat_type` is a categorical variable. T
 
 ```
 
-In order to remedy this in a way that will be better utilized for our model, we will categorize the different towns of Singapore into NSEW (North, South, East, West) regions, and further apply one-hot encoding as done above since it is a categorical variable.
+As noted near the beginning, we see that there are a lot of distinct values for our `town` variable which may affect our prediction model.
+
+In order to remedy this in a way that will be better utilized for our model, we categorized the different towns of Singapore into NSEW (North, South, East, West) regions, and further applied one-hot encoding as done above since it is a categorical variable.
 
 ```{r}
 # Function to categorize towns into NSEW regions
@@ -350,14 +349,14 @@ In order to remedy this in a way that will be better utilized for our model, we 
 
 ```
 
-Note that for one-hot encoding on the columns `region` and `flat_type` , we can just drop one of the columns as it can be identified by the rest of the columns, i.e `(is_north,is_south,is_west) = (0,0,0)`corresponds to the house being in the East Region.
+We noted that for one-hot encoding on the columns `region` and `flat_type` , we can just drop one of the columns as it can be identified by the rest of the columns, i.e `(is_north,is_south,is_west) = (0,0,0)`corresponds to the house being in the East Region.
 
 ```{r}
 # housing <- housing %>% 
 #         dplyr::select(!c(is_east,is_multi_generation))
 ```
 
-In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we will use regularization. Beginning with Ridge Regularization:
+In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we  used regularization. We began with Ridge Regularization as shown below:
 
 ```{r}
 
@@ -496,7 +495,7 @@ Using the F-test to understand the variability between the features in the data 
 
 ```
 
-In the Lasso model the feature "is_5\_room" has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
+In the Lasso model the feature `is_5_room` has a zero coefficient and this F-test confirms that we can drop this feature due to the p-value being higher than 0.05. So we will re-run the linear regression ommitting this feature.
 
 ```{r}
 # ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room + 
@@ -577,3 +576,21 @@ covid <- housing %>%
 After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
  
 Did not work because high R^2 value did not match the high residual error.
+
+==========
+
+There were multiple issues with this attempt:
+
+1) Having such a high $R^2$ on housing prices is surprising, and is an indication of potential overfitting. As mentioned before, there are a lot of features of a house that affect its price but are not captured in our regressors.  Since our $R^2$ was 0.99, that indicates that there are no such features and is perhaps the case in our attempt.
+
+2) The size of the residuals in the plot do not look consistent with an $R^2$ of 0.99. Residuals should not have a marked time trend which indicates a violation of the normality assumption and was clearly present in our plot. We have learned that it may be due to our neglect for controlling for important variables and/or we are not using a valuable predictor for predicting housing resale prices.
+
+
+
+##### References
+
+Resale flat prices based on registration date from Jan-2017 onwards. Data.gov.sg. <https://beta.data.gov.sg/datasets/d_8b84c4ee58e3cfc0ece0d773c8ca6abc/view>
+
+Origin of data set for Singaporean homes. Kaggle.com. <https://www.kaggle.com/code/ashydv/housing-price-prediction-linear-regression/notebook>
+
+Singaporean Consumer Price Index. <https://www.singstat.gov.sg/whats-new/latest-news/cpi-highlights>
