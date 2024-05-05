@@ -45,7 +45,6 @@ library(car)
 ```{r}
 # Data from the Housing and Development Board of Singapore
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
-table(housing$flat_model)
 ```
 
 ## Data Inspection
