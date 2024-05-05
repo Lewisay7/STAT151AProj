@@ -19,7 +19,7 @@ For the purpose of this report, we will attempt to formulate an effective predic
 
 Our data collection process began with an open web research on the housing markets of Singapore. We landed on Kaggle, an open source hub of public data sets uploaded by public users, which can be used for data exploration, building predictive models, and general practice with real-world data. Specifically, our data from Kaggle was transcribed by a user from the Singapore Government Agency Website that studied Resale flat prices based on registration date from Jan-2017 onwards. Data was collected by the Housing and Development Board, commonly referred to as "HDB". It is a statutory board of the Ministry of National Development in Singapore and it seeks to provide support in homeownership and ease in rental processes for residents. Simultaneously as the HDB are providing aid, they are collecting data on what home are being bought, built, and sold for. As this government established board provides public housing for more than 80% of Singapore's population, this project will make the assumption that all data was collected as a random sample of Singapore's population and data quality is up to par with research standards.
 
-# 1. Exploratory Data Analysis and  Data Preprocessing
+## Exploratory Data Analysis and Data Preprocessing
 
 We will begin with Exploratory Data Analysis to understand the data that we are working with.
 
@@ -47,7 +47,7 @@ library(car)
 housing <- read_csv("Resale_Price_2017_2022.csv",show_col_types=FALSE)
 ```
 
-## Data Inspection
+### 1.Data Inspection
 
 ```{r, echo=FALSE}
 # Checking for NA values in our data
@@ -66,11 +66,11 @@ glimpse(housing)
 
 Upon our first inspection of the data, we will be using the `resale_price` as the response variable since we are interested in predicting housing resale price. As for our potential regressors of interest, we are electing to utilize `month`, `town`, `flat_type`, `floor_area_sqm`, and `flat_model` variables and we will subset the data to only focus on these variables. These variables are defined as follows:
 
-- `month`: The month at which the information on the particular home is recorded.
-- `town`: The town this particular home is situated in.
-- `flat_type`: The type of home described as either 1, 2, 3, 4, or 5 rooms, executive, or multi-generation.
-- `floor_area_sqm`: The size of the home in regards to the area of the floor in squared meters.
-- `flat_model`: The model of the home described as either 2-room, 3Gen, Adjoined flat, Apartment, DBSS, Improved, Improved-Maisonette, Maisonette, Model A, Model A-Maisonette, Model A2, Multi Generation, New Generation, Premium, Apartment Premium, Apartment Loft, Premium Maisonette, Simplified, Standard, Terrace, Type S1, Type S2.
+-   `month`: The month at which the information on the particular home is recorded.
+-   `town`: The town this particular home is situated in.
+-   `flat_type`: The type of home described as either 1, 2, 3, 4, or 5 rooms, executive, or multi-generation.
+-   `floor_area_sqm`: The size of the home in regards to the area of the floor in squared meters.
+-   `flat_model`: The model of the home described as either 2-room, 3Gen, Adjoined flat, Apartment, DBSS, Improved, Improved-Maisonette, Maisonette, Model A, Model A-Maisonette, Model A2, Multi Generation, New Generation, Premium, Apartment Premium, Apartment Loft, Premium Maisonette, Simplified, Standard, Terrace, Type S1, Type S2.
 
 The reason why we chose these variables in particular is because we believe they will be the most likely to have the most significant effect on housing resale price. This will be further explored as move on.
 
@@ -88,7 +88,6 @@ We also must note that for `town`, there are many distinct values:
 ```{r}
 cat("Distinct values for `town` :",length(unique(housing$town)))
 ```
-
 
 This is important to note as it may affect the effectiveness of our model which will aim to account for soon in this report.
 
@@ -127,7 +126,6 @@ housing <- housing %>%
 
 Next we would like to make adjustments for inflation using the Singaporean Consumer Price Index for "Housing and Utilities". This main purpose for this adjustment is to account for the time variable since we recognize that COVID-19 could possibly have an effect on housing prices. We will be calculating the "real," or "relative" price of housing in Singapore, which in the field of Economics, is used to adjust for inflation. We will use data on the Consumer Price Index in Singapore provided by the Department of Statistics in Singapore.
 
-
 ```{r, echo=FALSE}
 # Reading the CPI data
 cpi <- readxl::read_xlsx("cpimar24.xlsx",sheet="T7",skip = 5) %>% as.data.frame()
@@ -147,19 +145,29 @@ housing <- left_join(housing, cpi, by = c("month" = "MTH"))  %>%
             mutate(resale_adj = (resale_price/cpi_val) *100)
 ```
 
-### 3. Standardizing Predictor Columns. 
+### 3. Normalizing Predictor Columns
 
-We noticed from inspecting our data that the variable `floor_area_sqm` which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to standardize these predictor columns in preparation for use later on in our model.
+We noticed from inspecting our data that the variable `floor_area_sqm` which describes how big the house is in terms of the area in square meters, contains extremely big values compared to everything else. Additionally, after conversions, the remaining lease in months corresponding to each house is also quite large. Our concern is that these large values may dominate other variables that we may want to use for our model.Thus, we elected to normalize these predictor columns in preparation for use later on in our model.
 
 ```{r, echo=FALSE}
-# Standardizing predictor columns
-X <- housing %>% dplyr::select(floor_area_sqm,remaining_lease_mth) %>%
-      scale() %>% as.data.frame()
-colnames(X) <- c("floor_area_sqm_std","remaining_lease_std")
+# Function for min-max normalization
+min_max_normalize <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
 
-# Adding the standardized predictors to our housing data
-housing <- cbind(housing,X) %>%
-  dplyr::select(!c(remaining_lease_mth,floor_area_sqm))
+# Applying min-max normalization to selected columns
+floor_area_sqm_std = min_max_normalize(housing$floor_area_sqm)
+remaining_lease_mth_std = min_max_normalize(housing$remaining_lease_mth)
+X <- cbind(floor_area_sqm_std,remaining_lease_mth_std)
+housing <- cbind(housing,X)
+
+
+# Remove original columns
+housing <- housing %>%
+  select(-floor_area_sqm, -remaining_lease_mth)
+
+
+
 ```
 
 And now, we will check the correlations of these variables with each other to see if there any indications of multicolinearity, so that we can be sure to account for later on when formulating our prediction model.
@@ -196,11 +204,18 @@ p2 <- ggplot(sample_housing) +
   labs(x="",y = "Log of Adjusted Resale Price")
 
 # Plotting the two scatterplots side-by-side
-grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Price", bottom= "Standardized FLoor Area in Square Meters")
+grid.arrange(p1,p2,ncol=2,top="Comparison of Adjusted and Log Adjusted Resale Price", 
+             bottom= "Standardized FLoor Area in Square Meters")
 
 ```
 
-### 5. Methods
+This will be the resultant data after preprocessing:
+
+```{r}
+glimpse(housing)
+```
+
+## Model Evaluation 
 
 Now, we can begin formulating our prediction model. Based on previous attempts (that will be explained in the *Limitations* section of this report) we are choosing to select thirteen randomized towns and filter our data to the most popular housing models and house types for the selected towns in the country of Singapore. Since there are 26 towns in total and the amount of data we have is very large, we want to take a smaller sample of our data and perform regression analysis on it instead of utilizing the whole dataset. While having more data is better than having too little, we realize that prediction models for our scenario is very complicated and regression will likely not be able to capture many of the intricacies of the housing market.
 
@@ -273,7 +288,6 @@ ggplot(housing_dat) +
 
 Based on our linear regression (lm()) model results and the plots above, it is somewhat reasonable to claim that the logged resale adjusted-for-inflation prices follow a linear trend. There are clearly horizontal trends and intense clustering in the plot right above, however, these problems will be addressed in the limitations of the extent of our project below. However, narrowing down to the scatter plot of floor area per square meter and adjusted resale prices, there is a slight increasing linear trend in the plot with large amounts of concentration between 0-2.5 square meters. This means that as the size of the home increases, so does the log of the resale prices. This makes sense intuitively due to the nature of homes, the larger they are, the more land they take up and the more you have to pay for the land.From our linear model summary with floor square meter as the only predictor, it produced to us a R squared value of 0.4298 which indicates it is not the best predictor, but after running f-tests on each of the other predictors given in our data set, this came out to be the most significant. When we checked our residuals given from our model, we noticed that the histogram was very close to being normally distributed which means that we achieved homoscedasticity and had a decent linear model with floor square meter as the predictor. This normality assumption also allowed us to make inference comments on the interpretation of our model.
 
-
 ### Limitations and Future Work
 
 The linear regression model we have above is unlikely to be considered a good prediction model for housing prices for many reasons. For one, we only utilized the size of the home in terms of the floor area in squared meters to formulate our prediction model using linear regression. As explained above, it makes sense intuitively why a larger home would generally result in a higher resale price compared to smaller homes. Additionally, we also controlled the other variables that would affect housing prices in our model which were the type of the flat and the model of the flat. In the end, we only really ended up with a model that depicts the relationship between the size of the home and the resale price of the home of a particular flat type and flat model, which in our case are 4 room Model A flats.
@@ -281,7 +295,6 @@ The linear regression model we have above is unlikely to be considered a good pr
 The housing market is very complex and the factors that contribute to determining the sale price of homes includes more than just the size of the home which we unfortunately were unable to capture in our linear regression model with the tools we were equipped with at the extent of our knowledge on linear modelling.
 
 We should note that an attempt had been made prior to the procedure and results we have gone through at the top in regards to formulating a prediction model that takes into account more than just the size of the home as predictors for housing resale price. We will now explain here:
-
 
 Below is all work prior to our consultation (Thursday, 5/2/2024) and new formulated question. We did not want to delete all of our work prior to the consultation because our original question had been approved many weeks prior to the meeting before being advised that the question was not answerable with our given data set. However, we did learn many things about our categorical variables from this process and want to show them below.
 
@@ -356,13 +369,13 @@ housing <- housing %>%
         dplyr::select(!c(is_east,is_multi_generation))
 ```
 
-In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we  used regularization. We began with Ridge Regularization as shown below:
+In order to evaluate the most statistically significant housing metrics and reduce the number of predictors we have, we used regularization. We began with Ridge Regularization as shown below:
 
 Ridge and Lasso
 
-```{r, cache=TRUE}
+```{r,eval=FALSE,echo=FALSE}
 # Setting up data for preliminary regression model
-df <- housing %>% dplyr::select(!month)
+
 
 # Linear Regression Model
 ori <- lm(log(resale_price) ~ . + 0, data = df)
@@ -370,9 +383,6 @@ ori <- lm(log(resale_price) ~ . + 0, data = df)
 # Predicted Values of Regression Model
 yhat <- predict(ori)
 
-```
-
-```{r, echo=FALSE}
 # Finding Mean Squared Error of Our Regression Model
 y <- log(df$resale_price)
 
@@ -400,10 +410,15 @@ ggplot(residuals_means, aes(x = month, y = mean_residual)) +
 # # Set seed for reproducibility 
 set.seed(123)
 
+housing <- housing %>% mutate(remaining_lease_mth = extract_months(remaining_lease)) 
+
+df <- housing %>% dplyr::select(!c(month,remaining_lease,town,block,
+                                   street_name,storey_range,flat_model,lease_commence_date))
+
 # # Create an index for splitting the data 
 split <- createDataPartition(y = housing$resale_price, p = 0.8, list = FALSE)
 X <- dplyr::select(df,!resale_price)
-X_train <- X[split,]
+X_train <- as.matrix(X[split,])
 X_test <- as.matrix(X[-split,])
 y_train <- df$resale_price[split]
 y_test <- df$resale_price[-split]
@@ -420,8 +435,8 @@ mae_ridge <- apply(abs(yhat_ridge - y_test),2,mean)
 min_ridge <- which.min(mae_ridge) #index corresponding to min MAE
 min_lambda_ridge <- lambda_ridge[min_ridge]
 coef_min_ridge <- coef(ridge)[,min_ridge] #Corresponding indices of the non-zero coefs
-lagged_features <- as.numeric(which(coef_min_ridge != 0))
-print("Lagged features present in the MAE-optimal ridge model:")
+lagged_features <- as.numeric(which(coef_min_ridge == 0))
+cat("Lagged features to be removed in the MAE-optimal ridge model:",lagged_features)
 
 # # Fit lasso model 
 lasso <- glmnet::glmnet(x = X_train, y = y_train, alpha = 1)
@@ -432,33 +447,19 @@ mae_lasso <- apply(abs(yhat_lasso - y_test),2,mean)
 # Column mean for each lambda
 min_lasso <- which.min(mae_lasso) #index corresponding to min MAE
 min_lambda_lasso <- lambda_lasso[min_lasso]
-coef_min_lasso <- as.data.frame(coef(lasso)[,min_lasso])
-
-#Corresponding indices of the non-zero coefficients
+coef_min_lasso <- coef(lasso)[,min_lasso]
+lagged_lasso <- as.numeric(which(coef_min_lasso == 0))
+cat("Lagged features to be removed in the MAE-optimal lasso model:",lagged_lasso,"\n")
 coef_min_lasso
+
+
 ```
-
-
 
 ### F-test for feature selection
 
 Using the F-test to understand the variability between the features in the data set, we want to select the features with most impact on our y variable.
 
 ```{r}
-# ANOVA - This is giving high RSE, meaning there is a lot of unexplained variability.
- anova_test <- aov(resale_price ~ is_1_room +
-                     is_2_room +
-                    is_3_room +
-                    is_4_room +
-                     is_5_room +
-                     is_executive +
-                     is_north +
-                    is_south +
-                     is_west +
-                     floor_area_sqm +
-                     remaining_lease, df)
-
-
 # F-test on each features with 2 levels
 is_1_room <- var.test(resale_price ~ is_1_room, df,
          alternative = "two.sided")
@@ -500,14 +501,8 @@ p_vals <- sapply(F_test_vals, function(result) {
 any(p_vals > 0.05)
 big_p <- which(p_vals>0.05)
 
-cat("Feature with p_value > 0.05: ", names(df)[big_p],"\n")
+cat("Feature with p_value > 0.05: ", names(df)[big_p+1],"\n")
 cat("Corresponding p-value: ",p_vals[big_p])
-
-# More than two levels, won't run with F-test.
-# floor_area_sqm <- var.test(resale_price ~ floor_area_sqm, housing,
-#    alternative = "two.sided")
-# remaining_lease <- var.test(resale_price ~ remaining_lease, housing,
-#    alternative = "two.sided")
 
 ```
 
@@ -523,7 +518,7 @@ ori_no_5_rooms <- lm(log(resale_price) ~ is_2_room +
                                          is_south +
                                          is_west +
                                          floor_area_sqm +
-                                         remaining_lease +
+                                         remaining_lease_mth +
                                          0, data = df)
 
 rsquared <- summary(ori_no_5_rooms)
@@ -580,7 +575,7 @@ covid_lm <- lm(log(resale_price) ~ is_2_room +
      is_south +
      is_west +
      floor_area_sqm +
-     remaining_lease +
+     remaining_lease_mth +
      0, data = covid)
 
 pre_rsquared <- summary(pre_covid_lm)$adj.r.squared
@@ -593,18 +588,16 @@ cat("R-squared for COVID regression is ",covid_rsquared)
 ## Results and Discussion
 
 After sub-setting the data into two categories (pre-covid and post-covid) and running our regression on both categories, we called the R function summary() to gather information on how our model was performing. In our pre-covid model, we achieved a R squared value of 0.9484. In our post-covid model, we achieved a R squared of 0.9462. There is only a slight difference between the two, which tells us....
- 
-Did not work because high R^2 value did not match the high residual error.
+
+Did not work because high R\^2 value did not match the high residual error.
 
 ==========
 
 There were multiple issues with this attempt:
 
-1) Having such a high $R^2$ on housing prices is surprising, and is an indication of potential overfitting. As mentioned before, there are a lot of features of a house that affect its price but are not captured in our regressors.  Since our $R^2$ was 0.99, that indicates that there are no such features and is perhaps the case in our attempt.
+1)  Having such a high $R^2$ on housing prices is surprising, and is an indication of potential overfitting. As mentioned before, there are a lot of features of a house that affect its price but are not captured in our regressors. Since our $R^2$ was 0.99, that indicates that there are no such features and is perhaps the case in our attempt.
 
-2) The size of the residuals in the plot do not look consistent with an $R^2$ of 0.99. Residuals should not have a marked time trend which indicates a violation of the normality assumption and was clearly present in our plot. We have learned that it may be due to our neglect for controlling for important variables and/or we are not using a valuable predictor for predicting housing resale prices.
-
-
+2)  The size of the residuals in the plot do not look consistent with an $R^2$ of 0.99. Residuals should not have a marked time trend which indicates a violation of the normality assumption and was clearly present in our plot. We have learned that it may be due to our neglect for controlling for important variables and/or we are not using a valuable predictor for predicting housing resale prices.
 
 ##### References
 
